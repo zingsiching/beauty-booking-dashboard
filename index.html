@@ -1476,7 +1476,7 @@
       storageMode: "supabase",
       supabaseUrl: "https://fakgvpwaqmngxzpfgebp.supabase.co",
       supabaseKey: "sb_publishable_vo_QF5z5TLcTxd8gLv5Exg_UUGRvJBt",
-      configVersion: 3,
+      configVersion: 4,
       apiUrl: "",
       staffList: [
         { name: "小宝", role: "顾问" },
@@ -1532,6 +1532,7 @@
     let records = loadRecords();
     let members = loadMembers();
     let cloudBootstrapped = false;
+    const dashboardContentId = "main";
 
     const dateStrip = document.getElementById("dateStrip");
     const pageTitle = document.getElementById("pageTitle");
@@ -2515,6 +2516,16 @@
         });
         if (settingsError) throw { ...settingsError, message: `app_settings: ${settingsError.message}` };
 
+        const { error: contentError } = await client.from("dashboard_content").upsert({
+          id: "codex_permission_test",
+          value: { ok: true, checkedAt: new Date().toISOString() },
+          updated_at: new Date().toISOString()
+        });
+        if (contentError) throw { ...contentError, message: `dashboard_content: ${contentError.message}` };
+
+        const { error: contentDeleteError } = await client.from("dashboard_content").delete().eq("id", "codex_permission_test");
+        if (contentDeleteError) throw { ...contentDeleteError, message: `dashboard_content delete: ${contentDeleteError.message}` };
+
         const { data: serviceData, error: serviceError } = await client
           .from("services")
           .insert({
@@ -2533,7 +2544,7 @@
         if (deleteError) throw { ...deleteError, message: `services delete: ${deleteError.message}` };
 
         setSyncStatus("Supabase 写入测试成功。", "ok");
-        alert("Supabase 写入测试成功：设置表、服务项目表都可以写入。");
+        alert("Supabase 写入测试成功：配置通道、设置表、服务项目表都可以写入。");
       } catch (error) {
         const message = formatSupabaseError(error, "Supabase 写入测试失败");
         setSyncStatus(message, "error");
@@ -2614,7 +2625,7 @@
         try {
           setSyncStatus("正在保存到 Supabase...");
           await saveSupabaseSettings(nextConfig);
-          await saveSupabaseContent(nextServices, nextRooms, nextConfig.staffList, nextInstruments);
+          await saveSupabaseDashboardContent(nextConfig, nextServices, nextRooms, nextConfig.staffList, nextInstruments);
           setSyncStatus("已保存到 Supabase。", "ok");
         } catch (error) {
           const message = formatSupabaseError(error, "本地已经保存并刷新，但 Supabase 没有写入成功");
@@ -2750,6 +2761,69 @@
       };
     }
 
+    function dashboardContentPayload(nextConfig, services, rooms, staff, instruments) {
+      return {
+        config: {
+          year: Number(nextConfig.year),
+          month: Number(nextConfig.month),
+          openHour: Number(nextConfig.openHour),
+          closeHour: Number(nextConfig.closeHour),
+          slotMinutes: Number(nextConfig.slotMinutes || 30)
+        },
+        services: services.map((service, index) => ({
+          label: service.label,
+          color: service.color || "#FFFFFF",
+          defaultDuration: Number(service.defaultDuration || 90),
+          sortOrder: index + 1
+        })),
+        rooms: rooms.map((room, index) => ({
+          name: room.name,
+          sortOrder: index + 1
+        })),
+        staff: staff.map((person, index) => ({
+          name: person.name,
+          role: person.role || "美容师",
+          sortOrder: index + 1
+        })),
+        instruments: instruments.map((instrument, index) => ({
+          name: instrument.name,
+          sortOrder: index + 1
+        })),
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    function applyDashboardContent(value) {
+      if (!value || typeof value !== "object") return false;
+      const nextStaff = Array.isArray(value.staff) ? value.staff.filter((person) => person.name) : [];
+      const nextServices = Array.isArray(value.services) ? value.services.filter((service) => service.label) : [];
+      const nextRooms = Array.isArray(value.rooms) ? value.rooms.filter((room) => room.name) : [];
+      const nextInstruments = Array.isArray(value.instruments) ? value.instruments.filter((instrument) => instrument.name) : [];
+      const nextConfig = value.config || {};
+      if (nextStaff.length) {
+        staffList = nextStaff.map((person) => ({ name: person.name, role: person.role || "美容师" }));
+      }
+      if (nextServices.length) {
+        serviceOptions = nextServices.map((service) => ({
+          label: service.label,
+          color: service.color || "#FFFFFF",
+          defaultDuration: Number(service.defaultDuration || 90)
+        }));
+      }
+      roomOptions = nextRooms.map((room) => ({ name: room.name }));
+      instrumentOptions = nextInstruments.map((instrument) => ({ name: instrument.name }));
+      applyConfig({
+        ...config,
+        ...nextConfig,
+        storageMode: config.storageMode,
+        supabaseUrl: config.supabaseUrl,
+        supabaseKey: config.supabaseKey,
+        apiUrl: config.apiUrl,
+        staffList
+      });
+      return true;
+    }
+
     function supabaseMemberPayload(member) {
       return {
         id: isUuid(member.id) ? member.id : undefined,
@@ -2821,6 +2895,20 @@
       ]);
       const error = staffResult.error || servicesResult.error || roomsResult.error || instrumentsResult.error || membersResult.error || appointmentsResult.error || settingsResult.error;
       if (error) throw error;
+      let contentValue = null;
+      try {
+        const { data: contentResult, error: contentError } = await client
+          .from("dashboard_content")
+          .select("value")
+          .eq("id", dashboardContentId)
+          .maybeSingle();
+        if (contentError) throw contentError;
+        contentValue = contentResult?.value || null;
+      } catch (contentError) {
+        if (contentError?.code !== "42P01") {
+          throw { ...contentError, message: `dashboard_content: ${contentError.message}` };
+        }
+      }
       if (settingsResult.data?.value) {
         applyConfig({
           ...config,
@@ -2836,6 +2924,9 @@
       serviceOptions = (servicesResult.data || []).map((row) => ({ id: row.id, label: row.name, color: row.color || "#FFFFFF", defaultDuration: row.default_duration || 90 }));
       roomOptions = (roomsResult.data || []).map((row) => ({ id: row.id, name: row.name }));
       instrumentOptions = (instrumentsResult.data || []).map((row) => ({ id: row.id, name: row.name }));
+      if (contentValue) {
+        applyDashboardContent(contentValue);
+      }
       members = (membersResult.data || []).map(mapSupabaseMember);
       records = (appointmentsResult.data || []).map(mapSupabaseAppointment);
       config.staffList = staffList;
@@ -2860,6 +2951,16 @@
       };
       const { error } = await getSupabaseClient().from("app_settings").upsert(payload);
       if (error) throw error;
+    }
+
+    async function saveSupabaseDashboardContent(nextConfig, services, rooms, staff, instruments) {
+      const payload = {
+        id: dashboardContentId,
+        value: dashboardContentPayload(nextConfig, services, rooms, staff, instruments),
+        updated_at: new Date().toISOString()
+      };
+      const { error } = await getSupabaseClient().from("dashboard_content").upsert(payload);
+      if (error) throw { ...error, message: `dashboard_content: ${error.message}` };
     }
 
     async function saveSupabaseAppointment(record) {
@@ -2900,13 +3001,13 @@
 
     async function saveSupabaseContent(services, rooms, staff, instruments) {
       const client = getSupabaseClient();
-      async function saveByName(table, rows, toPayload) {
+      async function saveByName(table, rows, toPayload, getName = (row) => row.name) {
         const { data: existingRows, error: readError } = await client.from(table).select("id,name");
         if (readError) throw { ...readError, message: `${table}: ${readError.message}` };
         const existingByName = new Map((existingRows || []).map((row) => [row.name, row]));
-        const nextNames = new Set(rows.map((row) => row.name));
+        const nextNames = new Set(rows.map(getName));
         for (const row of rows) {
-          const existing = existingByName.get(row.name);
+          const existing = existingByName.get(getName(row));
           const payload = toPayload(row);
           if (existing) {
             const { error } = await client.from(table).update(payload).eq("id", existing.id);
@@ -2930,7 +3031,7 @@
         enabled: true,
         sort_order: service.sortOrder,
         updated_at: new Date().toISOString()
-      }));
+      }), (service) => service.label);
 
       await saveByName("rooms", rooms.map((room, index) => ({ ...room, sortOrder: index + 1 })), (room) => ({
         name: room.name,

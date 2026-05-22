@@ -1,3 +1,9 @@
+create table if not exists public.dashboard_content (
+  id text primary key default 'main',
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 alter table public.staff enable row level security;
 alter table public.rooms enable row level security;
 alter table public.instruments enable row level security;
@@ -5,6 +11,7 @@ alter table public.services enable row level security;
 alter table public.members enable row level security;
 alter table public.appointments enable row level security;
 alter table public.app_settings enable row level security;
+alter table public.dashboard_content enable row level security;
 
 drop policy if exists "anon can read staff" on public.staff;
 drop policy if exists "anon can insert staff" on public.staff;
@@ -71,3 +78,12 @@ create policy "anon can read app_settings" on public.app_settings for select usi
 create policy "anon can insert settings" on public.app_settings for insert with check (true);
 create policy "anon can update settings" on public.app_settings for update using (true) with check (true);
 create policy "anon can delete settings" on public.app_settings for delete using (true);
+
+drop policy if exists "anon can read dashboard content" on public.dashboard_content;
+drop policy if exists "anon can insert dashboard content" on public.dashboard_content;
+drop policy if exists "anon can update dashboard content" on public.dashboard_content;
+drop policy if exists "anon can delete dashboard content" on public.dashboard_content;
+create policy "anon can read dashboard content" on public.dashboard_content for select using (true);
+create policy "anon can insert dashboard content" on public.dashboard_content for insert with check (true);
+create policy "anon can update dashboard content" on public.dashboard_content for update using (true) with check (true);
+create policy "anon can delete dashboard content" on public.dashboard_content for delete using (true);
