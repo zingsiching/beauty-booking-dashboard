@@ -2526,25 +2526,8 @@
         const { error: contentDeleteError } = await client.from("dashboard_content").delete().eq("id", "codex_permission_test");
         if (contentDeleteError) throw { ...contentDeleteError, message: `dashboard_content delete: ${contentDeleteError.message}` };
 
-        const { data: serviceData, error: serviceError } = await client
-          .from("services")
-          .insert({
-            name: testName,
-            color: "#FFFFFF",
-            default_duration: 30,
-            enabled: false,
-            sort_order: 999,
-            updated_at: new Date().toISOString()
-          })
-          .select("id")
-          .single();
-        if (serviceError) throw { ...serviceError, message: `services: ${serviceError.message}` };
-
-        const { error: deleteError } = await client.from("services").delete().eq("id", serviceData.id);
-        if (deleteError) throw { ...deleteError, message: `services delete: ${deleteError.message}` };
-
         setSyncStatus("Supabase 写入测试成功。", "ok");
-        alert("Supabase 写入测试成功：配置通道、设置表、服务项目表都可以写入。");
+        alert("Supabase 写入测试成功：配置通道和设置表都可以写入。");
       } catch (error) {
         const message = formatSupabaseError(error, "Supabase 写入测试失败");
         setSyncStatus(message, "error");
@@ -2659,6 +2642,13 @@
         lower.includes("not allowed")
       ) {
         return `${prefix}：当前 Supabase RLS/权限策略不允许前端写入${code}。请在 Supabase 的 SQL Editor 运行 supabase-rls-policies.sql 后再试。原始提示：${detail}`;
+      }
+      if (
+        error?.code === "42P01" ||
+        error?.code === "PGRST205" ||
+        lower.includes("dashboard_content") && lower.includes("could not find")
+      ) {
+        return `${prefix}：Supabase 还没有创建配置通道 dashboard_content。请先在 Supabase SQL Editor 运行 supabase-dashboard-content-channel.sql。原始提示：${detail}`;
       }
       return `${prefix}${code}：${detail}`;
     }
@@ -2997,63 +2987,6 @@
       if (!isUuid(id)) return;
       const { error } = await getSupabaseClient().from("members").delete().eq("id", id);
       if (error) throw error;
-    }
-
-    async function saveSupabaseContent(services, rooms, staff, instruments) {
-      const client = getSupabaseClient();
-      async function saveByName(table, rows, toPayload, getName = (row) => row.name) {
-        const { data: existingRows, error: readError } = await client.from(table).select("id,name");
-        if (readError) throw { ...readError, message: `${table}: ${readError.message}` };
-        const existingByName = new Map((existingRows || []).map((row) => [row.name, row]));
-        const nextNames = new Set(rows.map(getName));
-        for (const row of rows) {
-          const existing = existingByName.get(getName(row));
-          const payload = toPayload(row);
-          if (existing) {
-            const { error } = await client.from(table).update(payload).eq("id", existing.id);
-            if (error) throw { ...error, message: `${table}: ${error.message}` };
-          } else {
-            const { error } = await client.from(table).insert(payload);
-            if (error) throw { ...error, message: `${table}: ${error.message}` };
-          }
-        }
-        const removeIds = (existingRows || []).filter((row) => !nextNames.has(row.name)).map((row) => row.id);
-        if (removeIds.length) {
-          const { error } = await client.from(table).update({ enabled: false, updated_at: new Date().toISOString() }).in("id", removeIds);
-          if (error) throw { ...error, message: `${table}: ${error.message}` };
-        }
-      }
-
-      await saveByName("services", services.map((service, index) => ({ ...service, sortOrder: index + 1 })), (service) => ({
-        name: service.label,
-        color: service.color || "#FFFFFF",
-        default_duration: Number(service.defaultDuration || 90),
-        enabled: true,
-        sort_order: service.sortOrder,
-        updated_at: new Date().toISOString()
-      }), (service) => service.label);
-
-      await saveByName("rooms", rooms.map((room, index) => ({ ...room, sortOrder: index + 1 })), (room) => ({
-        name: room.name,
-        enabled: true,
-        sort_order: room.sortOrder,
-        updated_at: new Date().toISOString()
-      }));
-
-      await saveByName("staff", staff.map((person, index) => ({ ...person, sortOrder: index + 1 })), (person) => ({
-        name: person.name,
-        role: person.role || "美容师",
-        enabled: true,
-        sort_order: person.sortOrder,
-        updated_at: new Date().toISOString()
-      }));
-
-      await saveByName("instruments", instruments.map((instrument, index) => ({ ...instrument, sortOrder: index + 1 })), (instrument) => ({
-        name: instrument.name,
-        enabled: true,
-        sort_order: instrument.sortOrder,
-        updated_at: new Date().toISOString()
-      }));
     }
 
     async function readCloudData() {
