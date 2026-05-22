@@ -1476,7 +1476,7 @@
       storageMode: "supabase",
       supabaseUrl: "https://fakgvpwaqmngxzpfgebp.supabase.co",
       supabaseKey: "sb_publishable_vo_QF5z5TLcTxd8gLv5Exg_UUGRvJBt",
-      configVersion: 4,
+      configVersion: 5,
       apiUrl: "",
       staffList: [
         { name: "小宝", role: "顾问" },
@@ -1606,6 +1606,33 @@
         throw new Error("Supabase SDK 未加载，请确认网络可访问 jsDelivr。");
       }
       return window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
+    }
+
+    async function supabaseRest(path, options = {}) {
+      if (!config.supabaseUrl || !config.supabaseKey) {
+        throw new Error("请先填写 Supabase Project URL 和 publishable key。");
+      }
+      const response = await fetch(`${config.supabaseUrl}/rest/v1/${path}`, {
+        ...options,
+        headers: {
+          apikey: config.supabaseKey,
+          Authorization: `Bearer ${config.supabaseKey}`,
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        }
+      });
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : null;
+      if (!response.ok) {
+        throw {
+          code: data?.code || response.status,
+          status: response.status,
+          message: data?.message || text || "Supabase REST 请求失败",
+          details: data?.details,
+          hint: data?.hint
+        };
+      }
+      return data;
     }
 
     function isUuid(value) {
@@ -2516,15 +2543,19 @@
         });
         if (settingsError) throw { ...settingsError, message: `app_settings: ${settingsError.message}` };
 
-        const { error: contentError } = await client.from("dashboard_content").upsert({
-          id: "codex_permission_test",
-          value: { ok: true, checkedAt: new Date().toISOString() },
-          updated_at: new Date().toISOString()
+        await supabaseRest("dashboard_content", {
+          method: "POST",
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify([{
+            id: "codex_permission_test",
+            value: { ok: true, checkedAt: new Date().toISOString() },
+            updated_at: new Date().toISOString()
+          }])
         });
-        if (contentError) throw { ...contentError, message: `dashboard_content: ${contentError.message}` };
-
-        const { error: contentDeleteError } = await client.from("dashboard_content").delete().eq("id", "codex_permission_test");
-        if (contentDeleteError) throw { ...contentDeleteError, message: `dashboard_content delete: ${contentDeleteError.message}` };
+        await supabaseRest("dashboard_content?id=eq.codex_permission_test", {
+          method: "DELETE",
+          headers: { Prefer: "return=representation" }
+        });
 
         setSyncStatus("Supabase 写入测试成功。", "ok");
         alert("Supabase 写入测试成功：配置通道和设置表都可以写入。");
@@ -2608,8 +2639,10 @@
         try {
           setSyncStatus("正在保存到 Supabase...");
           await saveSupabaseSettings(nextConfig);
-          await saveSupabaseDashboardContent(nextConfig, nextServices, nextRooms, nextConfig.staffList, nextInstruments);
-          setSyncStatus("已保存到 Supabase。", "ok");
+          const savedValue = await saveSupabaseDashboardContent(nextConfig, nextServices, nextRooms, nextConfig.staffList, nextInstruments);
+          applyDashboardContent(savedValue);
+          saveConfig();
+          setSyncStatus(`已保存到 Supabase：${savedValue.rooms?.length || 0} 个房间，${savedValue.staff?.length || 0} 位人员。`, "ok");
         } catch (error) {
           const message = formatSupabaseError(error, "本地已经保存并刷新，但 Supabase 没有写入成功");
           setSyncStatus(message, "error");
@@ -2944,13 +2977,27 @@
     }
 
     async function saveSupabaseDashboardContent(nextConfig, services, rooms, staff, instruments) {
-      const payload = {
-        id: dashboardContentId,
-        value: dashboardContentPayload(nextConfig, services, rooms, staff, instruments),
-        updated_at: new Date().toISOString()
-      };
-      const { error } = await getSupabaseClient().from("dashboard_content").upsert(payload);
-      if (error) throw { ...error, message: `dashboard_content: ${error.message}` };
+      const value = dashboardContentPayload(nextConfig, services, rooms, staff, instruments);
+      const updatedAt = new Date().toISOString();
+      const path = `dashboard_content?id=eq.${encodeURIComponent(dashboardContentId)}`;
+      const updated = await supabaseRest(path, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ value, updated_at: updatedAt })
+      });
+      if (!Array.isArray(updated) || !updated.length) {
+        await supabaseRest("dashboard_content", {
+          method: "POST",
+          headers: { Prefer: "return=representation" },
+          body: JSON.stringify([{ id: dashboardContentId, value, updated_at: updatedAt }])
+        });
+      }
+      const saved = await supabaseRest(`dashboard_content?id=eq.${encodeURIComponent(dashboardContentId)}&select=value,updated_at`);
+      const savedValue = Array.isArray(saved) ? saved[0]?.value : null;
+      if (!savedValue?.staff?.length || !savedValue?.services?.length) {
+        throw new Error("dashboard_content: 保存后读回的数据不完整，请检查 value 字段。");
+      }
+      return savedValue;
     }
 
     async function saveSupabaseAppointment(record) {
