@@ -1476,7 +1476,7 @@
       storageMode: "supabase",
       supabaseUrl: "https://fakgvpwaqmngxzpfgebp.supabase.co",
       supabaseKey: "sb_publishable_vo_QF5z5TLcTxd8gLv5Exg_UUGRvJBt",
-      configVersion: 2,
+      configVersion: 3,
       apiUrl: "",
       staffList: [
         { name: "小宝", role: "顾问" },
@@ -1531,6 +1531,7 @@
     let storageKey = getRecordsStorageKey();
     let records = loadRecords();
     let members = loadMembers();
+    let cloudBootstrapped = false;
 
     const dateStrip = document.getElementById("dateStrip");
     const pageTitle = document.getElementById("pageTitle");
@@ -2973,9 +2974,22 @@
       }
     }
 
+    async function bootstrapCloudData() {
+      if (cloudBootstrapped || config.storageMode !== "supabase") return;
+      cloudBootstrapped = true;
+      try {
+        await readCloudData();
+      } catch (error) {
+        cloudBootstrapped = false;
+      }
+    }
+
     function updateLoginState() {
       const isLoggedIn = localStorage.getItem("beautySchedulerLoggedIn") === "yes";
       document.getElementById("loginScreen").classList.toggle("hidden", isLoggedIn);
+      if (isLoggedIn) {
+        bootstrapCloudData();
+      }
     }
 
     document.getElementById("loginForm").addEventListener("submit", (event) => {
