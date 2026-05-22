@@ -1,0 +1,3021 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>预约管理看板</title>
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --panel: #ffffff;
+      --ink: #1d1d1f;
+      --muted: #6e6e73;
+      --line: #e5e5ea;
+      --line-strong: #d1d1d6;
+      --brand: #007aff;
+      --brand-dark: #005ecb;
+      --teal: #30b0c7;
+      --green-bg: #e8f7ee;
+      --green-border: #34c759;
+      --yellow-bg: #fff6d8;
+      --yellow-border: #ffcc00;
+      --blue-bg: #e5f2ff;
+      --blue-border: #64a8ff;
+      --rose-bg: #ffe8ec;
+      --rose-border: #ff3b5f;
+      --gray-bg: #ededf2;
+      --gray-border: #aeaeb2;
+      --slot-height: 48px;
+      --slot-count: 24;
+      --time-width: 112px;
+      --staff-width: 212px;
+      --staff-count: 5;
+      --radius: 8px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 286px minmax(760px, 1fr);
+    }
+
+    .sidebar {
+      background:
+        linear-gradient(145deg, rgba(238, 246, 255, 0.96), rgba(248, 251, 255, 0.9));
+      backdrop-filter: blur(22px);
+      border-right: 1px solid var(--line);
+      padding: 18px 14px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #007aff, #30b0c7);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .brand-subtitle {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 18px 0 8px;
+      font-weight: 700;
+    }
+
+    .date-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .date-btn {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.82);
+      border-radius: 7px;
+      min-height: 40px;
+      color: var(--ink);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+    }
+
+    .date-btn:hover {
+      border-color: var(--brand);
+    }
+
+    .date-btn.active {
+      color: #fff;
+      background: var(--brand);
+      border-color: var(--brand);
+      font-weight: 800;
+    }
+
+    .side-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 13px;
+    }
+
+    .side-card strong {
+      color: var(--ink);
+    }
+
+    .rule-card {
+      display: grid;
+      gap: 10px;
+    }
+
+    .rule-edit-btn {
+      width: 100%;
+      min-height: 36px;
+      border: 1px solid var(--line-strong);
+      background: #fff;
+      border-radius: 7px;
+      color: var(--brand);
+      font-weight: 800;
+    }
+
+    .rule-edit-btn:hover {
+      border-color: var(--brand);
+      background: #f5faff;
+    }
+
+    .side-card.slim {
+      line-height: 1.7;
+    }
+
+    .config-list {
+      margin: 8px 0 0;
+      padding-left: 18px;
+    }
+
+    .config-list li {
+      margin: 6px 0;
+    }
+
+    .module-nav {
+      display: grid;
+      gap: 4px;
+      margin-bottom: 18px;
+    }
+
+    .module-btn {
+      border: 0;
+      background: transparent;
+      border-radius: 10px;
+      min-height: 42px;
+      padding: 0 12px;
+      text-align: left;
+      color: var(--ink);
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .module-btn.active {
+      background: #fff;
+      color: var(--ink);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+    }
+
+    .module-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: #e8f2ff;
+      color: var(--brand);
+      font-weight: 900;
+    }
+
+    .module-panel.hidden,
+    .page-module.hidden,
+    .appointment-page.hidden {
+      display: none;
+    }
+
+    .main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(245, 245, 247, 0.86);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--line);
+      padding: 18px 22px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 26px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .page-meta {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: 13px;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      border: 1px solid var(--line-strong);
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--ink);
+      border-radius: 7px;
+      min-height: 38px;
+      padding: 0 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 700;
+    }
+
+    .btn.primary {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+
+    .btn.primary:hover {
+      background: var(--brand-dark);
+    }
+
+    .btn.danger {
+      color: #b42336;
+      border-color: #f0b9c1;
+    }
+
+    .view-switch {
+      display: inline-flex;
+      border: 1px solid var(--line-strong);
+      background: rgba(255, 255, 255, 0.86);
+      border-radius: 7px;
+      overflow: hidden;
+    }
+
+    .view-switch button {
+      border: 0;
+      background: transparent;
+      min-height: 36px;
+      padding: 0 14px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .view-switch button.active {
+      color: #fff;
+      background: var(--teal);
+    }
+
+    .subnav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .subnav-btn {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.86);
+      border-radius: 999px;
+      min-height: 34px;
+      padding: 0 13px;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .subnav-btn.active {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+
+    .date-navigator {
+      padding: 16px 22px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .date-stepper {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .date-stepper button {
+      border: 0;
+      background: transparent;
+      min-width: 42px;
+      min-height: 38px;
+      font-size: 22px;
+      color: var(--muted);
+    }
+
+    .date-current {
+      min-width: 150px;
+      text-align: center;
+      font-weight: 900;
+      padding: 0 14px;
+    }
+
+    .date-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 2px 8px;
+      scrollbar-width: thin;
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .date-chip {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.86);
+      border-radius: 8px;
+      min-width: 62px;
+      min-height: 42px;
+      padding: 0 10px;
+      font-weight: 800;
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .date-chip.active {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+
+    .dashboard {
+      padding: 18px 22px 26px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.8fr);
+      gap: 16px;
+    }
+
+    .dashboard-module {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.06);
+    }
+
+    .module-title {
+      font-size: 18px;
+      font-weight: 900;
+      margin-bottom: 16px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric-card {
+      background: #f7f8fa;
+      border-radius: 14px;
+      padding: 18px;
+      min-height: 150px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .metric-number {
+      font-size: 64px;
+      line-height: 1;
+      font-weight: 900;
+      margin-top: 18px;
+      letter-spacing: 0;
+    }
+
+    .rank-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .rank-item {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .rank-index {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #e8f2ff;
+      color: var(--brand);
+      font-size: 12px;
+    }
+
+    .chart-card {
+      margin-top: 14px;
+      background: #f7f8fa;
+      border-radius: 14px;
+      padding: 16px;
+      min-height: 260px;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .board-shell {
+      padding: 18px 22px 26px;
+      overflow: auto;
+    }
+
+    .board {
+      width: max-content;
+      min-width: 100%;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.08);
+      isolation: isolate;
+    }
+
+    .board-header {
+      display: grid;
+      grid-template-columns: var(--time-width) repeat(var(--staff-count), var(--staff-width));
+      position: relative;
+      z-index: 3;
+      background: #fff;
+      border-bottom: 1px solid var(--line-strong);
+    }
+
+    .corner,
+    .staff-head {
+      min-height: 68px;
+      padding: 12px 14px;
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .corner {
+      color: var(--muted);
+      font-size: 13px;
+      align-items: flex-start;
+      gap: 5px;
+    }
+
+    .corner strong {
+      color: var(--ink);
+      font-size: 18px;
+    }
+
+    .corner span {
+      white-space: nowrap;
+    }
+
+    .staff-head.group-start {
+      box-shadow: inset 3px 0 0 rgba(0, 122, 255, 0.28);
+    }
+
+    .staff-name {
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+
+    .staff-role {
+      font-size: 12px;
+      color: var(--brand);
+      margin-top: 4px;
+      font-weight: 700;
+    }
+
+    .grid-wrap {
+      display: grid;
+      grid-template-columns: var(--time-width) repeat(var(--staff-count), var(--staff-width));
+      position: relative;
+      z-index: 1;
+      background: #fff;
+    }
+
+    .time-col {
+      grid-column: 1;
+      background: #fbfcfd;
+      border-right: 1px solid var(--line);
+    }
+
+    .time-cell {
+      height: var(--slot-height);
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      padding: 13px 18px 0 10px;
+      font-size: 14px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .staff-col {
+      position: relative;
+      min-height: calc(var(--slot-height) * var(--slot-count));
+      border-right: 1px solid var(--line);
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          #fff 0,
+          #fff calc(var(--slot-height) - 1px),
+          var(--line) calc(var(--slot-height) - 1px),
+          var(--line) var(--slot-height)
+        );
+    }
+
+    .staff-col:nth-child(even) {
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          #fcfdfc 0,
+          #fcfdfc calc(var(--slot-height) - 1px),
+          var(--line) calc(var(--slot-height) - 1px),
+          var(--line) var(--slot-height)
+        );
+    }
+
+    .staff-col.group-start {
+      box-shadow: inset 3px 0 0 rgba(0, 122, 255, 0.12);
+    }
+
+    .slot-hit {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: var(--slot-height);
+      border: 0;
+      background: transparent;
+    }
+
+    .slot-hit:hover {
+      background: rgba(0, 122, 255, 0.055);
+      outline: 1px solid rgba(0, 122, 255, 0.2);
+      outline-offset: -1px;
+    }
+
+    .appointment {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      border: 1px solid var(--green-border);
+      background: var(--green-bg);
+      color: #14532d;
+      border-radius: 7px;
+      padding: 7px 8px;
+      overflow: hidden;
+      text-align: left;
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
+      z-index: 2;
+      max-height: calc(100% - 6px);
+    }
+
+    .appointment:hover {
+      filter: brightness(0.98);
+    }
+
+    .appointment.pending {
+      background: var(--yellow-bg);
+      border-color: var(--yellow-border);
+      color: #7a4c00;
+    }
+
+    .appointment.arrived {
+      background: var(--blue-bg);
+      border-color: var(--blue-border);
+      color: #184b7a;
+    }
+
+    .appointment.cancelled {
+      background: var(--rose-bg);
+      border-color: var(--rose-border);
+      color: #8f1d2b;
+    }
+
+    .appointment.blocked {
+      background: var(--gray-bg);
+      border-color: var(--gray-border);
+      color: #374151;
+    }
+
+    .service-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      vertical-align: 1px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .appt-name {
+      font-weight: 800;
+      line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 13px;
+    }
+
+    .appt-detail {
+      font-size: 12px;
+      line-height: 1.35;
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      padding: 18px 20px 0;
+      font-size: 13px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.42);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 100;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      width: min(760px, 100%);
+      max-height: 92vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: 0 24px 80px rgba(15, 23, 42, 0.34);
+    }
+
+    .modal-head,
+    .modal-foot {
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .modal-foot {
+      border-top: 1px solid var(--line);
+      border-bottom: 0;
+      justify-content: flex-end;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .close-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .form {
+      padding: 18px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 13px;
+      color: #374151;
+      font-weight: 700;
+    }
+
+    input,
+    select,
+    textarea {
+      border: 1px solid var(--line-strong);
+      border-radius: 7px;
+      min-height: 40px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 76px;
+    }
+
+    .staff-editor {
+      min-height: 130px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      line-height: 1.55;
+    }
+
+    .mini-help {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .sync-status {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      margin-top: 8px;
+    }
+
+    .sync-status.ok {
+      color: #167c3b;
+    }
+
+    .sync-status.error {
+      color: #b42336;
+    }
+
+    .login-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: linear-gradient(145deg, #eef6ff, #f8fbff);
+    }
+
+    .login-screen.hidden {
+      display: none;
+    }
+
+    .login-card {
+      width: min(420px, 100%);
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.12);
+    }
+
+    .login-title {
+      font-size: 26px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .login-subtitle {
+      color: var(--muted);
+      margin-bottom: 22px;
+    }
+
+    .logout-btn {
+      width: 100%;
+      justify-content: center;
+      margin-top: 14px;
+    }
+
+    .warning {
+      grid-column: 1 / -1;
+      display: none;
+      background: #fff7ed;
+      border: 1px solid #fdba74;
+      color: #9a3412;
+      border-radius: 7px;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+
+    .warning.show {
+      display: block;
+    }
+
+    .summary-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 13px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.76);
+      border-radius: 999px;
+      padding: 6px 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .member-hint {
+      grid-column: 1 / -1;
+      border: 1px solid var(--line);
+      background: #f7fbff;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .member-hint strong {
+      color: var(--ink);
+    }
+
+    .member-hint.ok {
+      border-color: #b7e4c7;
+      background: #effaf3;
+      color: #166534;
+    }
+
+    .member-layout {
+      padding: 18px 22px 26px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .member-tools {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .member-search {
+      width: min(420px, 100%);
+    }
+
+    .member-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .member-card {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.86);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: left;
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.05);
+    }
+
+    .member-card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .member-name {
+      font-weight: 900;
+      font-size: 18px;
+    }
+
+    .member-meta {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .member-badge {
+      display: inline-flex;
+      border-radius: 999px;
+      background: #e8f2ff;
+      color: #005ecb;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+      }
+
+      .date-grid {
+        grid-template-columns: repeat(6, 1fr);
+      }
+
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar-actions {
+        justify-content: flex-start;
+      }
+
+      .member-layout {
+        padding: 14px;
+      }
+
+      .member-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .dashboard {
+        grid-template-columns: 1fr;
+        padding: 14px;
+      }
+
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metric-number {
+        font-size: 52px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="login-screen" id="loginScreen">
+    <form class="login-card" id="loginForm">
+      <div class="login-title">门店管理后台</div>
+      <div class="login-subtitle">请输入本地账号密码进入预约与会员系统。</div>
+      <div class="field">
+        <label for="loginUser">账号</label>
+        <input id="loginUser" autocomplete="username" placeholder="admin">
+      </div>
+      <div class="field" style="margin-top:14px;">
+        <label for="loginPassword">密码</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" placeholder="admin123">
+      </div>
+      <button class="btn primary" style="width:100%; justify-content:center; margin-top:20px;" type="submit">登录</button>
+      <div class="sync-status" id="loginMessage">默认账号：admin / admin123</div>
+    </form>
+  </section>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">约</div>
+        <div>
+          <div class="brand-title">预约管理看板</div>
+          <div class="brand-subtitle" id="brandSubtitle">电脑端 MVP</div>
+        </div>
+      </div>
+
+      <nav class="module-nav" aria-label="系统模块">
+        <button class="module-btn active" type="button" data-module="appointments"><span class="module-icon">约</span>预约管理</button>
+        <button class="module-btn" type="button" data-module="members"><span class="module-icon">会</span>会员系统管理</button>
+      </nav>
+
+      <div class="module-panel" id="appointmentSidebar">
+        <div class="section-title">当前规则</div>
+        <div class="side-card rule-card">
+          <div>
+            管理月份：<span id="ruleMonth">2026年6月</span><br>
+            营业时间：<span id="ruleHours">10:00 - 22:00</span><br>
+            时间间隔：30分钟<br>
+            数据保存：<span id="storageModeLabel">浏览器本地（MVP）</span>
+          </div>
+          <button class="rule-edit-btn" type="button" id="ruleEditBtn">修改当前规则</button>
+        </div>
+
+        <div class="section-title">使用说明</div>
+        <div class="side-card slim">
+          先看预约数据看板，再进入当日预约管理处理排班；输入手机号可自动识别会员。
+        </div>
+      </div>
+
+      <div class="module-panel hidden" id="memberSidebar">
+        <div class="section-title">会员概览</div>
+        <div class="side-card">
+          会员总数：<span id="memberTotal">0</span><br>
+          有效会员：<span id="memberActiveTotal">0</span><br>
+          数据表：会员资料
+        </div>
+        <div class="section-title">使用说明</div>
+        <div class="side-card slim">
+          会员用手机号作为主要识别依据。预约时输入同一手机号，会自动显示会员资料。
+        </div>
+      </div>
+      <button class="btn logout-btn" type="button" id="logoutBtn">退出登录</button>
+    </aside>
+
+    <main class="main">
+      <section class="page-module" id="appointmentsModule">
+      <header class="toolbar">
+        <div>
+          <h1 class="page-title" id="pageTitle">预约数据看板</h1>
+          <div class="page-meta" id="pageMeta"></div>
+          <div class="summary-row" id="summaryRow"></div>
+          <div class="subnav" aria-label="预约页面">
+            <button class="subnav-btn active" type="button" data-appointment-page="dashboard">预约数据看板</button>
+            <button class="subnav-btn" type="button" data-appointment-page="daily">当日预约管理</button>
+            <button class="subnav-btn" type="button" data-appointment-page="monthly">当月预约</button>
+          </div>
+        </div>
+        <div class="toolbar-actions">
+          <button class="btn" type="button" id="pullCloudBtn">刷新云端数据</button>
+          <button class="btn" type="button" id="settingsBtn">修改看板内容</button>
+          <button class="btn" type="button" id="exportBtn">导出当月预约记录</button>
+          <button class="btn primary" type="button" id="newBtn">新增预约</button>
+          <div class="view-switch schedule-only" aria-label="视图切换">
+            <button class="active" type="button">人员</button>
+            <button type="button" disabled>房间</button>
+            <button type="button" disabled>仪器</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="appointment-page" id="dashboardPage">
+        <div class="dashboard">
+          <div class="dashboard-module">
+            <div class="module-title">预约数据</div>
+            <div class="metric-grid">
+              <div class="metric-card">
+                <div class="metric-label">本月预约单</div>
+                <div class="metric-number" id="monthAppointmentCount">0</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">本月预约客户</div>
+                <div class="metric-number" id="monthCustomerCount">0</div>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="module-title">项目排行</div>
+              <div class="rank-list" id="serviceRankList"></div>
+            </div>
+            <div class="chart-card">
+              <div class="module-title">预约趋势折线图</div>
+              <div class="chart-legend">
+                <span><span class="legend-dot" style="background:#007aff"></span>本月</span>
+                <span><span class="legend-dot" style="background:#a1a1aa"></span>上月</span>
+              </div>
+              <div id="trendChart"></div>
+            </div>
+          </div>
+          <div class="dashboard-module">
+            <div class="module-title">会员数据</div>
+            <div class="metric-grid">
+              <div class="metric-card">
+                <div class="metric-label">当前会员数</div>
+                <div class="metric-number" id="dashboardMemberCount">0</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">当月新增</div>
+                <div class="metric-number" id="dashboardNewMembers">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="appointment-page hidden" id="schedulePage">
+        <div class="date-navigator">
+          <div class="date-stepper">
+            <button type="button" id="prevDayBtn" aria-label="前一天">‹</button>
+            <div class="date-current" id="currentDateLabel">06/01（周一）</div>
+            <button type="button" id="nextDayBtn" aria-label="后一天">›</button>
+          </div>
+          <div class="date-strip" id="dateStrip"></div>
+        </div>
+        <div class="empty-state" id="hintText">点击任意空白时间格可快速新增预约；点击已有预约可编辑或删除。</div>
+        <section class="board-shell">
+          <div class="board">
+            <div class="board-header" id="boardHeader"></div>
+            <div class="grid-wrap" id="gridWrap"></div>
+          </div>
+        </section>
+      </section>
+      </section>
+
+      <section class="page-module hidden" id="membersModule">
+        <header class="toolbar">
+          <div>
+            <h1 class="page-title">会员系统管理</h1>
+            <div class="page-meta">会员信息、套餐权益、预约识别</div>
+            <div class="summary-row" id="memberSummaryRow"></div>
+          </div>
+          <div class="toolbar-actions">
+            <button class="btn" type="button" id="exportMembersBtn">导出会员 Excel</button>
+            <button class="btn primary" type="button" id="newMemberBtn">新增会员</button>
+          </div>
+        </header>
+        <div class="member-layout">
+          <div class="member-tools">
+            <input class="member-search" id="memberSearch" autocomplete="off" placeholder="搜索姓名、手机号、会员等级">
+            <button class="btn" type="button" id="clearMemberSearchBtn">清空</button>
+          </div>
+          <div class="member-grid" id="memberGrid"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title" id="modalTitle">新增预约</div>
+        <button class="close-btn" type="button" id="closeBtn" aria-label="关闭">×</button>
+      </div>
+      <form id="appointmentForm">
+        <div class="form">
+          <input type="hidden" id="recordId">
+          <input type="hidden" id="memberId">
+          <div class="field">
+            <label for="recordType">类型</label>
+            <select id="recordType">
+              <option value="appointment">预约</option>
+              <option value="blocked">占用</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="status">状态</label>
+            <select id="status">
+              <option value="confirmed">已确认</option>
+              <option value="pending">待确认</option>
+              <option value="arrived">已到店/进行中</option>
+              <option value="cancelled">已取消</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="date">日期</label>
+            <select id="date"></select>
+          </div>
+          <div class="field">
+            <label for="startTime">开始时间</label>
+            <select id="startTime"></select>
+          </div>
+          <div class="field">
+            <label for="duration">服务时长</label>
+            <select id="duration">
+              <option value="30">30分钟</option>
+              <option value="60">60分钟</option>
+              <option value="90" selected>90分钟</option>
+              <option value="120">120分钟</option>
+              <option value="150">150分钟</option>
+              <option value="180">180分钟</option>
+              <option value="240">240分钟</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="staff">人员</label>
+            <select id="staff"></select>
+          </div>
+          <div class="field">
+            <label for="customer">客户姓名</label>
+            <input id="customer" autocomplete="off" placeholder="例如：王女士">
+          </div>
+          <div class="field">
+            <label for="phone">手机号</label>
+            <input id="phone" autocomplete="off" placeholder="可选">
+          </div>
+          <div class="member-hint" id="memberHint">输入会员手机号后，系统会自动识别会员资料。</div>
+          <div class="field">
+            <label for="service">服务项目</label>
+            <select id="service"></select>
+          </div>
+          <div class="field">
+            <label for="room">房间</label>
+            <select id="room"></select>
+          </div>
+          <div class="field">
+            <label for="instrument">仪器</label>
+            <select id="instrument"></select>
+          </div>
+          <div class="field">
+            <label for="createdBy">登记人</label>
+            <input id="createdBy" autocomplete="off" placeholder="可选">
+          </div>
+          <div class="field full">
+            <label for="notes">备注</label>
+            <textarea id="notes" placeholder="客户需求、注意事项、占用原因等"></textarea>
+          </div>
+          <div class="warning" id="conflictWarning"></div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn danger" type="button" id="deleteBtn">删除</button>
+          <button class="btn" type="button" id="cancelBtn">取消</button>
+          <button class="btn primary" type="submit">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="memberModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="memberModalTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title" id="memberModalTitle">新增会员</div>
+        <button class="close-btn" type="button" id="memberCloseBtn" aria-label="关闭">×</button>
+      </div>
+      <form id="memberForm">
+        <div class="form">
+          <input type="hidden" id="memberRecordId">
+          <div class="field">
+            <label for="memberName">客户姓名</label>
+            <input id="memberName" autocomplete="off" placeholder="例如：王女士">
+          </div>
+          <div class="field">
+            <label for="memberPhone">手机号</label>
+            <input id="memberPhone" autocomplete="off" placeholder="建议必填">
+          </div>
+          <div class="field">
+            <label for="memberLevel">会员等级</label>
+            <input id="memberLevel" autocomplete="off" placeholder="普通会员 / VIP">
+          </div>
+          <div class="field">
+            <label for="memberStatus">会员状态</label>
+            <select id="memberStatus">
+              <option value="有效">有效</option>
+              <option value="即将到期">即将到期</option>
+              <option value="已过期">已过期</option>
+              <option value="暂停">暂停</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="memberOpenedAt">开卡日期</label>
+            <input id="memberOpenedAt" type="date">
+          </div>
+          <div class="field">
+            <label for="memberExpiresAt">到期日期</label>
+            <input id="memberExpiresAt" type="date">
+          </div>
+          <div class="field">
+            <label for="memberPackage">套餐项目</label>
+            <input id="memberPackage" autocomplete="off" placeholder="例如：补水10次卡">
+          </div>
+          <div class="field">
+            <label for="memberRemainingTimes">剩余次数</label>
+            <input id="memberRemainingTimes" type="number" min="0" step="1">
+          </div>
+          <div class="field">
+            <label for="memberBalance">余额</label>
+            <input id="memberBalance" type="number" min="0" step="0.01">
+          </div>
+          <div class="field">
+            <label for="memberTotalSpend">累计消费</label>
+            <input id="memberTotalSpend" type="number" min="0" step="0.01">
+          </div>
+          <div class="field">
+            <label for="memberLastVisitAt">最近到店日期</label>
+            <input id="memberLastVisitAt" type="date">
+          </div>
+          <div class="field full">
+            <label for="memberNotes">会员备注</label>
+            <textarea id="memberNotes" placeholder="皮肤情况、偏好、禁忌、服务记录等"></textarea>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn danger" type="button" id="deleteMemberBtn">删除</button>
+          <button class="btn" type="button" id="memberCancelBtn">取消</button>
+          <button class="btn primary" type="submit">保存会员</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="settingsBackdrop" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title" id="settingsTitle">修改表格</div>
+        <button class="close-btn" type="button" id="settingsCloseBtn" aria-label="关闭">×</button>
+      </div>
+      <form id="settingsForm">
+        <div class="form">
+          <div class="field">
+            <label for="settingYear">年份</label>
+            <input id="settingYear" type="number" min="2020" max="2100">
+          </div>
+          <div class="field">
+            <label for="settingMonth">月份</label>
+            <select id="settingMonth">
+              <option value="1">1月</option>
+              <option value="2">2月</option>
+              <option value="3">3月</option>
+              <option value="4">4月</option>
+              <option value="5">5月</option>
+              <option value="6">6月</option>
+              <option value="7">7月</option>
+              <option value="8">8月</option>
+              <option value="9">9月</option>
+              <option value="10">10月</option>
+              <option value="11">11月</option>
+              <option value="12">12月</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="settingOpenHour">开始营业</label>
+            <select id="settingOpenHour"></select>
+          </div>
+          <div class="field">
+            <label for="settingCloseHour">结束营业</label>
+            <select id="settingCloseHour"></select>
+          </div>
+          <div class="field full">
+            <label for="settingServices">服务项目</label>
+            <textarea class="staff-editor" id="settingServices"></textarea>
+            <div class="mini-help">每行一个项目，格式：项目名,颜色,默认分钟。例：面部护理,#D9EAD3,90</div>
+          </div>
+          <div class="field full">
+            <label for="settingRooms">房间</label>
+            <textarea class="staff-editor" id="settingRooms"></textarea>
+            <div class="mini-help">每行一个房间。例：1号房</div>
+          </div>
+          <div class="field full">
+            <label for="settingStaff">人员名单</label>
+            <textarea class="staff-editor" id="settingStaff"></textarea>
+            <div class="mini-help">每行一个人，格式：姓名,角色。例：小宝,顾问</div>
+          </div>
+          <div class="field full">
+            <label for="settingInstruments">仪器</label>
+            <textarea class="staff-editor" id="settingInstruments"></textarea>
+            <div class="mini-help">每行一个仪器。例：仪器1</div>
+          </div>
+          <div class="field">
+            <label for="storageMode">数据储存方式</label>
+            <select id="storageMode">
+              <option value="local">浏览器本地</option>
+              <option value="supabase">Supabase</option>
+              <option value="googleSheets">Google Sheets</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="supabaseUrl">Supabase Project URL</label>
+            <input id="supabaseUrl" autocomplete="off" placeholder="https://xxxxx.supabase.co">
+          </div>
+          <div class="field full">
+            <label for="supabaseKey">Supabase publishable key</label>
+            <input id="supabaseKey" autocomplete="off" placeholder="sb_publishable_...">
+          </div>
+          <div class="field full">
+            <label for="apiUrl">Google Apps Script 接口（已停用备用）</label>
+            <input id="apiUrl" autocomplete="off" placeholder="https://script.google.com/.../exec">
+          </div>
+          <div class="field full">
+            <div class="mini-help">当前主推 Supabase。填好 Project URL 和 publishable key 后，可读取/保存预约、会员、服务项目、房间、人员等云端数据。</div>
+            <div class="sync-status" id="syncStatus">当前尚未连接云端。</div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn" type="button" id="settingsCancelBtn">取消</button>
+          <button class="btn primary" type="submit">保存设置</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const DEFAULT_CONFIG = {
+      year: 2026,
+      month: 6,
+      openHour: 10,
+      closeHour: 22,
+      slotMinutes: 30,
+      defaultDuration: 90,
+      storageMode: "supabase",
+      supabaseUrl: "https://fakgvpwaqmngxzpfgebp.supabase.co",
+      supabaseKey: "sb_publishable_vo_QF5z5TLcTxd8gLv5Exg_UUGRvJBt",
+      configVersion: 2,
+      apiUrl: "",
+      staffList: [
+        { name: "小宝", role: "顾问" },
+        { name: "凤凤", role: "顾问" },
+        { name: "英姐", role: "美容师" },
+        { name: "露娟", role: "美容师" },
+        { name: "两角", role: "美容师" }
+      ]
+    };
+
+    const defaultServiceOptions = [
+      { label: "面部护理", color: "#D9EAD3" },
+      { label: "身体护理", color: "#D9EAF7" },
+      { label: "清洁", color: "#FFF2CC" },
+      { label: "补水", color: "#D9EAD3" },
+      { label: "抗衰", color: "#EADCF8" },
+      { label: "美白", color: "#FCE4EC" },
+      { label: "祛痘", color: "#FCF5CD" },
+      { label: "脱毛", color: "#DDEBF7" },
+      { label: "咨询", color: "#E7E6E6" },
+      { label: "复诊", color: "#E2D6C3" },
+      { label: "其他", color: "#FFFFFF" }
+    ];
+
+    let serviceOptions = [...defaultServiceOptions];
+    let roomOptions = [];
+    let instrumentOptions = [];
+
+    const configStorageKey = "beautySchedulerConfig";
+    const membersStorageKey = "beautySchedulerMembers";
+    let config = loadConfig();
+    let staffList = config.staffList;
+    let currentModule = "appointments";
+    let currentAppointmentPage = "dashboard";
+
+    const statusMap = {
+      confirmed: { label: "已确认", className: "confirmed" },
+      pending: { label: "待确认", className: "pending" },
+      arrived: { label: "已到店", className: "arrived" },
+      cancelled: { label: "已取消", className: "cancelled" },
+      blocked: { label: "占用", className: "blocked" }
+    };
+
+    const slotHeight = Number(getComputedStyle(document.documentElement).getPropertyValue("--slot-height").replace("px", "")) || 48;
+    let selectedDay = 1;
+    let year = config.year;
+    let month = config.month;
+    let openMinutes = config.openHour * 60;
+    let closeMinutes = config.closeHour * 60;
+    let slotMinutes = config.slotMinutes;
+    let daysInMonth = new Date(year, month, 0).getDate();
+    let storageKey = getRecordsStorageKey();
+    let records = loadRecords();
+    let members = loadMembers();
+
+    const dateStrip = document.getElementById("dateStrip");
+    const pageTitle = document.getElementById("pageTitle");
+    const pageMeta = document.getElementById("pageMeta");
+    const summaryRow = document.getElementById("summaryRow");
+    const boardHeader = document.getElementById("boardHeader");
+    const gridWrap = document.getElementById("gridWrap");
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const form = document.getElementById("appointmentForm");
+    const deleteBtn = document.getElementById("deleteBtn");
+    const conflictWarning = document.getElementById("conflictWarning");
+    const settingsBackdrop = document.getElementById("settingsBackdrop");
+    const settingsForm = document.getElementById("settingsForm");
+    const syncStatus = document.getElementById("syncStatus");
+    const memberModalBackdrop = document.getElementById("memberModalBackdrop");
+    const memberForm = document.getElementById("memberForm");
+    const deleteMemberBtn = document.getElementById("deleteMemberBtn");
+
+    function pad(num) {
+      return String(num).padStart(2, "0");
+    }
+
+    function dateValue(day) {
+      return `${year}-${pad(month)}-${pad(day)}`;
+    }
+
+    function getRecordsStorageKey() {
+      return `beautyScheduler-${year}-${pad(month)}-records`;
+    }
+
+    function loadConfig() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(configStorageKey));
+        const merged = { ...DEFAULT_CONFIG, ...saved, staffList: saved?.staffList || DEFAULT_CONFIG.staffList };
+        if (!saved?.configVersion || saved.configVersion < DEFAULT_CONFIG.configVersion) {
+          merged.storageMode = "supabase";
+          merged.supabaseUrl = DEFAULT_CONFIG.supabaseUrl;
+          merged.supabaseKey = DEFAULT_CONFIG.supabaseKey;
+          merged.configVersion = DEFAULT_CONFIG.configVersion;
+          localStorage.setItem(configStorageKey, JSON.stringify(merged));
+        }
+        return merged;
+      } catch (error) {
+        return { ...DEFAULT_CONFIG, staffList: [...DEFAULT_CONFIG.staffList] };
+      }
+    }
+
+    function saveConfig() {
+      localStorage.setItem(configStorageKey, JSON.stringify(config));
+    }
+
+    function applyConfig(nextConfig) {
+      config = nextConfig;
+      staffList = config.staffList;
+      year = Number(config.year);
+      month = Number(config.month);
+      openMinutes = Number(config.openHour) * 60;
+      closeMinutes = Number(config.closeHour) * 60;
+      slotMinutes = Number(config.slotMinutes);
+      daysInMonth = new Date(year, month, 0).getDate();
+      selectedDay = Math.min(selectedDay, daysInMonth);
+      storageKey = getRecordsStorageKey();
+      records = loadRecords();
+    }
+
+    function getSupabaseClient() {
+      if (!config.supabaseUrl || !config.supabaseKey) {
+        throw new Error("请先填写 Supabase Project URL 和 publishable key。");
+      }
+      if (!window.supabase?.createClient) {
+        throw new Error("Supabase SDK 未加载，请确认网络可访问 jsDelivr。");
+      }
+      return window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
+    }
+
+    function isUuid(value) {
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+    }
+
+    function newId(prefix) {
+      return crypto.randomUUID ? crypto.randomUUID() : `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function formatDay(day) {
+      return `${month}月${day}日`;
+    }
+
+    function minutesToTime(minutes) {
+      return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+    }
+
+    function timeToMinutes(time) {
+      const [hours, mins] = time.split(":").map(Number);
+      return hours * 60 + mins;
+    }
+
+    function endTime(record) {
+      return minutesToTime(timeToMinutes(record.startTime) + Number(record.duration));
+    }
+
+    function slotTimes(includeBoundary = false) {
+      const times = [];
+      const end = includeBoundary ? closeMinutes : closeMinutes - slotMinutes;
+      for (let minutes = openMinutes; minutes <= end; minutes += slotMinutes) {
+        times.push(minutesToTime(minutes));
+      }
+      return times;
+    }
+
+    function loadRecords() {
+      try {
+        return JSON.parse(localStorage.getItem(storageKey)) || [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveRecords() {
+      localStorage.setItem(storageKey, JSON.stringify(records));
+    }
+
+    function loadMembers() {
+      try {
+        return JSON.parse(localStorage.getItem(membersStorageKey)) || [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveMembers() {
+      localStorage.setItem(membersStorageKey, JSON.stringify(members));
+    }
+
+    function normalizePhone(value) {
+      return String(value || "").replace(/\D/g, "");
+    }
+
+    function findMemberByPhone(phone) {
+      const normalized = normalizePhone(phone);
+      if (!normalized) return null;
+      return members.find((member) => normalizePhone(member.phone) === normalized) || null;
+    }
+
+    function findMemberById(id) {
+      return members.find((member) => member.id === id) || null;
+    }
+
+    function getServiceMeta(label) {
+      return serviceOptions.find((service) => service.label === label) || serviceOptions[serviceOptions.length - 1];
+    }
+
+    function textColorForBackground(hex) {
+      const clean = hex.replace("#", "");
+      const red = parseInt(clean.slice(0, 2), 16);
+      const green = parseInt(clean.slice(2, 4), 16);
+      const blue = parseInt(clean.slice(4, 6), 16);
+      const brightness = (red * 299 + green * 587 + blue * 114) / 1000;
+      return brightness > 170 ? "#1d1d1f" : "#ffffff";
+    }
+
+    function getWeekday(day) {
+      return ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][new Date(year, month - 1, day).getDay()];
+    }
+
+    function monthLabel() {
+      return `${year}年${month}月`;
+    }
+
+    function updateStaticLabels() {
+      document.title = `${monthLabel()}预约管理看板`;
+      document.getElementById("brandSubtitle").textContent = `${monthLabel()} · 电脑端 MVP`;
+      document.getElementById("ruleMonth").textContent = monthLabel();
+      document.getElementById("ruleHours").textContent = `${minutesToTime(openMinutes)} - ${minutesToTime(closeMinutes)}`;
+      document.getElementById("storageModeLabel").textContent = config.storageMode === "supabase" ? "Supabase 云端" : (config.storageMode === "googleSheets" ? "Google Sheets 云端" : "浏览器本地（MVP）");
+      document.documentElement.style.setProperty("--staff-count", staffList.length);
+      document.documentElement.style.setProperty("--slot-count", slotTimes().length);
+    }
+
+    function renderDateStrip() {
+      if (!dateStrip) return;
+      dateStrip.innerHTML = "";
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `date-chip${day === selectedDay ? " active" : ""}`;
+        button.textContent = `${day}日`;
+        button.title = `${formatDay(day)} ${getWeekday(day)}`;
+        button.addEventListener("click", () => {
+          selectedDay = day;
+          render();
+        });
+        dateStrip.appendChild(button);
+      }
+      const active = dateStrip.querySelector(".date-chip.active");
+      if (active) active.scrollIntoView({ inline: "center", block: "nearest" });
+      document.getElementById("currentDateLabel").textContent = `${pad(month)}/${pad(selectedDay)}（${getWeekday(selectedDay)}）`;
+    }
+
+    function renderHeader() {
+      boardHeader.innerHTML = "";
+      const corner = document.createElement("div");
+      corner.className = "corner";
+      corner.innerHTML = "<strong>时间</strong>";
+      boardHeader.appendChild(corner);
+
+      staffList.forEach((staff, index) => {
+        const head = document.createElement("div");
+        const startsNewGroup = index > 0 && staff.role !== staffList[index - 1].role;
+        head.className = `staff-head${startsNewGroup ? " group-start" : ""}`;
+        head.innerHTML = `<div class="staff-name">${staff.name}</div><div class="staff-role">${staff.role}</div>`;
+        boardHeader.appendChild(head);
+      });
+    }
+
+    function renderGrid() {
+      gridWrap.innerHTML = "";
+      const timeCol = document.createElement("div");
+      timeCol.className = "time-col";
+      slotTimes().forEach((time) => {
+        const cell = document.createElement("div");
+        cell.className = "time-cell";
+        cell.textContent = time;
+        timeCol.appendChild(cell);
+      });
+      gridWrap.appendChild(timeCol);
+
+      staffList.forEach((staff, index) => {
+        const col = document.createElement("div");
+        const startsNewGroup = index > 0 && staff.role !== staffList[index - 1].role;
+        col.className = `staff-col${startsNewGroup ? " group-start" : ""}`;
+        col.dataset.staff = staff.name;
+
+        slotTimes().forEach((time, index) => {
+          const hit = document.createElement("button");
+          hit.type = "button";
+          hit.className = "slot-hit";
+          hit.style.top = `${index * slotHeight}px`;
+          hit.title = `${formatDay(selectedDay)} ${time} ${staff.name}`;
+          hit.addEventListener("click", () => openModal({
+            date: dateValue(selectedDay),
+            startTime: time,
+            staff: staff.name,
+            duration: 90,
+            status: "confirmed",
+            type: "appointment"
+          }));
+          col.appendChild(hit);
+        });
+
+        records
+          .filter((record) => record.date === dateValue(selectedDay) && record.staff === staff.name)
+          .forEach((record) => col.appendChild(createRecordBlock(record)));
+
+        gridWrap.appendChild(col);
+      });
+    }
+
+    function createRecordBlock(record) {
+      const start = timeToMinutes(record.startTime);
+      const top = ((start - openMinutes) / slotMinutes) * slotHeight;
+      const height = Math.max((Number(record.duration) / slotMinutes) * slotHeight - 6, 30);
+      const status = record.type === "blocked" ? statusMap.blocked : statusMap[record.status] || statusMap.confirmed;
+      const serviceMeta = getServiceMeta(record.service);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `appointment ${status.className}`;
+      button.style.top = `${top + 3}px`;
+      button.style.height = `${height}px`;
+      if (record.type !== "blocked") {
+        button.style.background = serviceMeta.color;
+        button.style.borderColor = serviceMeta.color === "#FFFFFF" ? "var(--line-strong)" : serviceMeta.color;
+        button.style.color = textColorForBackground(serviceMeta.color);
+      }
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openModal(record);
+      });
+
+      const member = record.memberId ? findMemberById(record.memberId) : findMemberByPhone(record.phone);
+      const memberText = member ? `（${member.level || "会员"}）` : "";
+      const title = record.type === "blocked" ? (record.notes || "占用") : `${record.customer || "未填写客户"}${memberText}`;
+      const service = record.type === "blocked" ? "不可预约" : (record.service || "未填写项目");
+      const room = record.room || "未分配";
+      button.innerHTML = `
+        <div class="appt-name">${escapeHtml(title)}</div>
+        <div class="appt-detail">${record.startTime} - ${endTime(record)}</div>
+        <div class="appt-detail">房间：${escapeHtml(room)}</div>
+        <div class="appt-detail">项目：${escapeHtml(service)}</div>
+      `;
+      return button;
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderSummary() {
+      const dayRecords = records.filter((record) => record.date === dateValue(selectedDay));
+      const active = dayRecords.filter((record) => record.type !== "blocked" && record.status !== "cancelled");
+      const pending = dayRecords.filter((record) => record.status === "pending");
+      const blocked = dayRecords.filter((record) => record.type === "blocked");
+      const advisors = staffList.filter((staff) => staff.role === "顾问").length;
+      const beauticians = staffList.filter((staff) => staff.role === "美容师").length;
+      summaryRow.innerHTML = `
+        <span class="pill">预约 ${active.length} 单</span>
+        <span class="pill">待确认 ${pending.length} 单</span>
+        <span class="pill">占用 ${blocked.length} 个</span>
+        <span class="pill">顾问 ${advisors} 位</span>
+        <span class="pill">美容师 ${beauticians} 位</span>
+      `;
+    }
+
+    function renderTitle() {
+      const titles = {
+        dashboard: "预约数据看板",
+        daily: "当日预约管理",
+        monthly: "当月预约"
+      };
+      pageTitle.textContent = titles[currentAppointmentPage] || "预约管理";
+      pageMeta.textContent = `${monthLabel()} · 营业时间 ${minutesToTime(openMinutes)} - ${minutesToTime(closeMinutes)}`;
+    }
+
+    function render() {
+      updateStaticLabels();
+      renderDateStrip();
+      renderTitle();
+      renderSummary();
+      renderHeader();
+      renderGrid();
+      renderDashboard();
+      renderMembers();
+      updateMemberStats();
+    }
+
+    function switchAppointmentPage(pageName) {
+      currentAppointmentPage = pageName;
+      document.querySelectorAll(".subnav-btn").forEach((button) => {
+        button.classList.toggle("active", button.dataset.appointmentPage === pageName);
+      });
+      document.getElementById("dashboardPage").classList.toggle("hidden", pageName !== "dashboard");
+      document.getElementById("schedulePage").classList.toggle("hidden", pageName === "dashboard");
+      document.querySelectorAll(".schedule-only").forEach((element) => {
+        element.style.display = pageName === "dashboard" ? "none" : "";
+      });
+      renderTitle();
+      renderDashboard();
+    }
+
+    function switchModule(moduleName) {
+      currentModule = moduleName;
+      document.querySelectorAll(".module-btn").forEach((button) => {
+        button.classList.toggle("active", button.dataset.module === moduleName);
+      });
+      document.getElementById("appointmentSidebar").classList.toggle("hidden", moduleName !== "appointments");
+      document.getElementById("memberSidebar").classList.toggle("hidden", moduleName !== "members");
+      document.getElementById("appointmentsModule").classList.toggle("hidden", moduleName !== "appointments");
+      document.getElementById("membersModule").classList.toggle("hidden", moduleName !== "members");
+      renderMembers();
+    }
+
+    function appointmentRecordsFor(yearValue, monthValue) {
+      const prefix = `${yearValue}-${pad(monthValue)}-`;
+      return records.filter((record) => (
+        record.type !== "blocked" &&
+        record.status !== "cancelled" &&
+        String(record.date || "").startsWith(prefix)
+      ));
+    }
+
+    function memberCreatedInCurrentMonth(member) {
+      const source = member.createdAt || member.openedAt;
+      if (!source) return false;
+      const date = new Date(source);
+      if (Number.isNaN(date.getTime())) return false;
+      return date.getFullYear() === year && date.getMonth() + 1 === month;
+    }
+
+    function renderDashboard() {
+      const thisMonthRecords = appointmentRecordsFor(year, month);
+      const prevMonthDate = new Date(year, month - 2, 1);
+      const prevMonthRecords = appointmentRecordsFor(prevMonthDate.getFullYear(), prevMonthDate.getMonth() + 1);
+      const customers = new Set(thisMonthRecords.map((record) => normalizePhone(record.phone) || record.customer).filter(Boolean));
+      document.getElementById("monthAppointmentCount").textContent = thisMonthRecords.length;
+      document.getElementById("monthCustomerCount").textContent = customers.size;
+      document.getElementById("dashboardMemberCount").textContent = members.length;
+      document.getElementById("dashboardNewMembers").textContent = members.filter(memberCreatedInCurrentMonth).length;
+      renderServiceRanking(thisMonthRecords);
+      renderTrendChart(thisMonthRecords, prevMonthRecords);
+    }
+
+    function renderServiceRanking(monthRecords) {
+      const counts = {};
+      monthRecords.forEach((record) => {
+        const service = record.service || "其他";
+        counts[service] = (counts[service] || 0) + 1;
+      });
+      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      const list = document.getElementById("serviceRankList");
+      if (!sorted.length) {
+        list.innerHTML = `<div class="member-meta">暂无预约项目数据</div>`;
+        return;
+      }
+      list.innerHTML = sorted.map(([service, count], index) => `
+        <div class="rank-item">
+          <span class="rank-index">${index + 1}</span>
+          <span>${escapeHtml(service)}</span>
+          <span>${count}单</span>
+        </div>
+      `).join("");
+    }
+
+    function dailyCounts(monthRecords, targetYear, targetMonth) {
+      const totalDays = new Date(targetYear, targetMonth, 0).getDate();
+      const counts = Array.from({ length: totalDays }, () => 0);
+      monthRecords.forEach((record) => {
+        const day = Number(String(record.date || "").slice(-2));
+        if (day >= 1 && day <= totalDays) counts[day - 1] += 1;
+      });
+      return counts;
+    }
+
+    function renderTrendChart(thisMonthRecords, prevMonthRecords) {
+      const currentCounts = dailyCounts(thisMonthRecords, year, month);
+      const prevDate = new Date(year, month - 2, 1);
+      const prevCounts = dailyCounts(prevMonthRecords, prevDate.getFullYear(), prevDate.getMonth() + 1);
+      const maxDays = Math.max(currentCounts.length, prevCounts.length);
+      const maxValue = Math.max(1, ...currentCounts, ...prevCounts);
+      const width = 720;
+      const height = 220;
+      const padX = 28;
+      const padY = 34;
+      const chartPoint = (value, index) => {
+        const x = padX + (index / Math.max(1, maxDays - 1)) * (width - padX * 2);
+        const y = height - padY - (value / maxValue) * (height - padY * 2);
+        return { x, y, value, day: index + 1 };
+      };
+      const points = (counts) => counts.map((value, index) => {
+        const point = chartPoint(value, index);
+        return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+      }).join(" ");
+      const labels = (counts, color, yOffset) => counts
+        .map((value, index) => chartPoint(value, index))
+        .filter((point) => point.value > 0)
+        .map((point) => `<text x="${point.x.toFixed(1)}" y="${(point.y + yOffset).toFixed(1)}" fill="${color}" font-size="12" font-weight="800" text-anchor="middle">${point.value}</text>`)
+        .join("");
+      document.getElementById("trendChart").innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" width="100%" height="220" role="img" aria-label="预约趋势折线图">
+          <line x1="${padX}" y1="${height - padY}" x2="${width - padX}" y2="${height - padY}" stroke="#d1d1d6" />
+          <line x1="${padX}" y1="${padY}" x2="${padX}" y2="${height - padY}" stroke="#d1d1d6" />
+          <polyline points="${points(prevCounts)}" fill="none" stroke="#a1a1aa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+          <polyline points="${points(currentCounts)}" fill="none" stroke="#007aff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+          ${labels(prevCounts, "#71717a", 18)}
+          ${labels(currentCounts, "#007aff", -10)}
+        </svg>
+      `;
+    }
+
+    function fillSelects() {
+      const dateSelect = document.getElementById("date");
+      const timeSelect = document.getElementById("startTime");
+      const staffSelect = document.getElementById("staff");
+      const serviceSelect = document.getElementById("service");
+      const roomSelect = document.getElementById("room");
+      const instrumentSelect = document.getElementById("instrument");
+      dateSelect.innerHTML = "";
+      timeSelect.innerHTML = "";
+      staffSelect.innerHTML = "";
+      serviceSelect.innerHTML = "";
+      roomSelect.innerHTML = "";
+      instrumentSelect.innerHTML = "";
+
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const option = document.createElement("option");
+        option.value = dateValue(day);
+        option.textContent = `${formatDay(day)} ${getWeekday(day)}`;
+        dateSelect.appendChild(option);
+      }
+
+      slotTimes().forEach((time) => {
+        const option = document.createElement("option");
+        option.value = time;
+        option.textContent = time;
+        timeSelect.appendChild(option);
+      });
+
+      staffList.forEach((staff) => {
+        const option = document.createElement("option");
+        option.value = staff.name;
+        option.textContent = staff.name;
+        staffSelect.appendChild(option);
+      });
+
+      serviceOptions.forEach((service) => {
+        const option = document.createElement("option");
+        option.value = service.label;
+        option.textContent = service.label;
+        serviceSelect.appendChild(option);
+      });
+
+      roomSelect.appendChild(new Option("可选", ""));
+      roomOptions.forEach((room) => {
+        roomSelect.appendChild(new Option(room.name, room.name));
+      });
+
+      instrumentSelect.appendChild(new Option("可选", ""));
+      instrumentOptions.forEach((instrument) => {
+        instrumentSelect.appendChild(new Option(instrument.name, instrument.name));
+      });
+    }
+
+    function openModal(data = {}) {
+      fillSelects();
+      if (data.service && !serviceOptions.some((service) => service.label === data.service)) {
+        const customOption = document.createElement("option");
+        customOption.value = data.service;
+        customOption.textContent = data.service;
+        document.getElementById("service").appendChild(customOption);
+      }
+      document.getElementById("recordId").value = data.id || "";
+      document.getElementById("memberId").value = data.memberId || "";
+      document.getElementById("recordType").value = data.type || "appointment";
+      document.getElementById("status").value = data.status || "confirmed";
+      document.getElementById("date").value = data.date || dateValue(selectedDay);
+      document.getElementById("startTime").value = data.startTime || minutesToTime(openMinutes);
+      document.getElementById("duration").value = data.duration || config.defaultDuration;
+      document.getElementById("staff").value = data.staff || staffList[0].name;
+      document.getElementById("customer").value = data.customer || "";
+      document.getElementById("phone").value = data.phone || "";
+      document.getElementById("service").value = data.service || serviceOptions[0].label;
+      document.getElementById("room").value = data.room || "";
+      document.getElementById("instrument").value = data.instrument || "";
+      document.getElementById("createdBy").value = data.createdBy || "";
+      document.getElementById("notes").value = data.notes || "";
+      deleteBtn.style.display = data.id ? "inline-flex" : "none";
+      document.getElementById("modalTitle").textContent = data.id ? "编辑预约/占用" : "新增预约/占用";
+      modalBackdrop.classList.add("open");
+      updateMemberHint();
+      updateConflictWarning();
+    }
+
+    function closeModal() {
+      modalBackdrop.classList.remove("open");
+      form.reset();
+      conflictWarning.classList.remove("show");
+    }
+
+    function formDataToRecord() {
+      const id = document.getElementById("recordId").value || newId("rec");
+      return {
+        id,
+        type: document.getElementById("recordType").value,
+        status: document.getElementById("status").value,
+        date: document.getElementById("date").value,
+        startTime: document.getElementById("startTime").value,
+        duration: Number(document.getElementById("duration").value),
+        staff: document.getElementById("staff").value,
+        memberId: document.getElementById("memberId").value,
+        customer: document.getElementById("customer").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        service: document.getElementById("service").value,
+        room: document.getElementById("room").value,
+        instrument: document.getElementById("instrument").value,
+        createdBy: document.getElementById("createdBy").value.trim(),
+        notes: document.getElementById("notes").value.trim(),
+        createdAt: records.find((record) => record.id === id)?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    function findConflict(candidate) {
+      const start = timeToMinutes(candidate.startTime);
+      const end = start + Number(candidate.duration);
+      return records.find((record) => {
+        if (record.id === candidate.id) return false;
+        if (record.date !== candidate.date || record.staff !== candidate.staff) return false;
+        if (record.status === "cancelled") return false;
+        const recordStart = timeToMinutes(record.startTime);
+        const recordEnd = recordStart + Number(record.duration);
+        return start < recordEnd && end > recordStart;
+      });
+    }
+
+    function updateConflictWarning() {
+      const candidate = formDataToRecord();
+      const outOfRange = timeToMinutes(candidate.startTime) + Number(candidate.duration) > closeMinutes;
+      const conflict = findConflict(candidate);
+      if (outOfRange) {
+        conflictWarning.textContent = `该预约会超过 ${minutesToTime(closeMinutes)}，请缩短时长或选择更早的开始时间。`;
+        conflictWarning.classList.add("show");
+        return true;
+      }
+      if (conflict) {
+        const name = conflict.type === "blocked" ? "占用" : (conflict.customer || "已有预约");
+        conflictWarning.textContent = `时间冲突：${conflict.staff} 在 ${conflict.startTime} - ${endTime(conflict)} 已有「${name}」。`;
+        conflictWarning.classList.add("show");
+        return true;
+      }
+      conflictWarning.classList.remove("show");
+      return false;
+    }
+
+    function updateMemberHint() {
+      const phone = document.getElementById("phone").value;
+      const memberHint = document.getElementById("memberHint");
+      const member = findMemberByPhone(phone);
+      if (member) {
+        document.getElementById("memberId").value = member.id;
+        if (!document.getElementById("customer").value.trim()) {
+          document.getElementById("customer").value = member.name || "";
+        }
+        memberHint.classList.add("ok");
+        memberHint.innerHTML = `<strong>已识别会员：</strong>${escapeHtml(member.name || "")}｜${escapeHtml(member.level || "会员")}｜剩余 ${escapeHtml(member.remainingTimes || 0)} 次｜余额 ${escapeHtml(member.balance || 0)}｜${escapeHtml(member.notes || "无备注")}`;
+        return;
+      }
+
+      document.getElementById("memberId").value = "";
+      memberHint.classList.remove("ok");
+      memberHint.textContent = phone ? "未匹配到会员。可在会员系统管理中新增该客户。" : "输入会员手机号后，系统会自动识别会员资料。";
+    }
+
+    async function saveForm(event) {
+      event.preventDefault();
+      let record = formDataToRecord();
+      if (record.type === "appointment" && !record.customer) {
+        alert("请填写客户姓名。");
+        return;
+      }
+      if (updateConflictWarning()) return;
+
+      selectedDay = Number(record.date.slice(-2));
+      const index = records.findIndex((item) => item.id === record.id);
+      if (index >= 0) {
+        records[index] = record;
+      } else {
+        records.push(record);
+      }
+      if (config.storageMode === "googleSheets" && config.apiUrl) {
+        await pushCloudData();
+      }
+      records.sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`));
+      saveRecords();
+      closeModal();
+      render();
+      if (config.storageMode === "supabase") {
+        try {
+          setSyncStatus("正在保存预约到 Supabase...");
+          const savedRecord = await saveSupabaseAppointment(record);
+          records = records.map((item) => item.id === record.id ? savedRecord : item);
+          saveRecords();
+          setSyncStatus("预约已保存到 Supabase。", "ok");
+          render();
+        } catch (error) {
+          const message = formatSupabaseError(error, "预约已先保存在前端，但 Supabase 没有写入成功");
+          setSyncStatus(message, "error");
+          alert(message);
+        }
+      }
+    }
+
+    async function deleteCurrentRecord() {
+      const id = document.getElementById("recordId").value;
+      if (!id) return;
+      const record = records.find((item) => item.id === id);
+      const label = record?.type === "blocked" ? "占用" : "预约";
+      if (!confirm(`确定删除这条${label}吗？`)) return;
+      records = records.filter((item) => item.id !== id);
+      saveRecords();
+      if (config.storageMode === "supabase") {
+        await deleteSupabaseAppointment(id);
+      } else if (config.storageMode === "googleSheets" && config.apiUrl) {
+        await pushCloudData();
+      }
+      closeModal();
+      render();
+    }
+
+    function exportExcel() {
+      const headers = ["预约日期", "开始时间", "结束时间", "客户姓名", "手机号", "是否会员", "会员等级", "服务项目", "美容师", "房间", "仪器", "类型", "预约状态", "备注", "登记人", "创建时间", "更新时间"];
+      const rows = records.map((record) => [
+        record.date,
+        record.startTime,
+        endTime(record),
+        record.customer,
+        record.phone,
+        findMemberById(record.memberId) || findMemberByPhone(record.phone) ? "是" : "否",
+        (findMemberById(record.memberId) || findMemberByPhone(record.phone))?.level || "",
+        record.service,
+        record.staff,
+        record.room,
+        record.instrument,
+        record.type === "blocked" ? "占用" : "预约",
+        record.type === "blocked" ? "占用" : (statusMap[record.status]?.label || record.status),
+        record.notes,
+        record.createdBy,
+        formatDateTime(record.createdAt),
+        formatDateTime(record.updatedAt)
+      ]);
+
+      const table = [headers, ...rows]
+        .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell || "")}</td>`).join("")}</tr>`)
+        .join("");
+      const html = `
+        <html>
+          <head><meta charset="utf-8"></head>
+          <body>
+            <table border="1">${table}</table>
+          </body>
+        </html>
+      `;
+      const blob = new Blob(["\ufeff", html], { type: "application/vnd.ms-excel;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${monthLabel()}预约记录.xls`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function exportMembersExcel() {
+      const headers = ["会员ID", "客户姓名", "手机号", "会员等级", "开卡日期", "到期日期", "套餐项目", "剩余次数", "余额", "累计消费", "最近到店日期", "会员状态", "备注", "创建时间", "更新时间"];
+      const rows = members.map((member) => [
+        member.id,
+        member.name,
+        member.phone,
+        member.level,
+        member.openedAt,
+        member.expiresAt,
+        member.packageName,
+        member.remainingTimes,
+        member.balance,
+        member.totalSpend,
+        member.lastVisitAt,
+        member.status,
+        member.notes,
+        formatDateTime(member.createdAt),
+        formatDateTime(member.updatedAt)
+      ]);
+      const table = [headers, ...rows]
+        .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell || "")}</td>`).join("")}</tr>`)
+        .join("");
+      const html = `<html><head><meta charset="utf-8"></head><body><table border="1">${table}</table></body></html>`;
+      const blob = new Blob(["\ufeff", html], { type: "application/vnd.ms-excel;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${monthLabel()}会员资料.xls`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function formatDateTime(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function renderMembers() {
+      const grid = document.getElementById("memberGrid");
+      if (!grid) return;
+      const keyword = document.getElementById("memberSearch")?.value.trim().toLowerCase() || "";
+      const filtered = members.filter((member) => {
+        const text = `${member.name || ""} ${member.phone || ""} ${member.level || ""} ${member.status || ""}`.toLowerCase();
+        return text.includes(keyword);
+      });
+      grid.innerHTML = "";
+      if (!filtered.length) {
+        grid.innerHTML = `<div class="side-card">暂无会员资料。点击“新增会员”开始录入。</div>`;
+        updateMemberStats();
+        return;
+      }
+      filtered.forEach((member) => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "member-card";
+        card.innerHTML = `
+          <div class="member-card-head">
+            <div>
+              <div class="member-name">${escapeHtml(member.name || "未命名会员")}</div>
+              <div class="member-meta">${escapeHtml(member.phone || "未填写手机号")}</div>
+            </div>
+            <span class="member-badge">${escapeHtml(member.level || "会员")}</span>
+          </div>
+          <div class="member-meta">状态：${escapeHtml(member.status || "有效")}｜剩余：${escapeHtml(member.remainingTimes || 0)} 次｜余额：${escapeHtml(member.balance || 0)}</div>
+          <div class="member-meta">套餐：${escapeHtml(member.packageName || "未填写")}</div>
+          <div class="member-meta">备注：${escapeHtml(member.notes || "无")}</div>
+        `;
+        card.addEventListener("click", () => openMemberModal(member));
+        grid.appendChild(card);
+      });
+      updateMemberStats();
+    }
+
+    function updateMemberStats() {
+      const activeMembers = members.filter((member) => (member.status || "有效") === "有效");
+      document.getElementById("memberTotal").textContent = members.length;
+      document.getElementById("memberActiveTotal").textContent = activeMembers.length;
+      const row = document.getElementById("memberSummaryRow");
+      if (row) {
+        row.innerHTML = `
+          <span class="pill">会员 ${members.length} 位</span>
+          <span class="pill">有效 ${activeMembers.length} 位</span>
+          <span class="pill">可预约识别 ${members.filter((member) => member.phone).length} 位</span>
+        `;
+      }
+    }
+
+    function openMemberModal(member = {}) {
+      document.getElementById("memberRecordId").value = member.id || "";
+      document.getElementById("memberName").value = member.name || "";
+      document.getElementById("memberPhone").value = member.phone || "";
+      document.getElementById("memberLevel").value = member.level || "普通会员";
+      document.getElementById("memberStatus").value = member.status || "有效";
+      document.getElementById("memberOpenedAt").value = member.openedAt || "";
+      document.getElementById("memberExpiresAt").value = member.expiresAt || "";
+      document.getElementById("memberPackage").value = member.packageName || "";
+      document.getElementById("memberRemainingTimes").value = member.remainingTimes || "";
+      document.getElementById("memberBalance").value = member.balance || "";
+      document.getElementById("memberTotalSpend").value = member.totalSpend || "";
+      document.getElementById("memberLastVisitAt").value = member.lastVisitAt || "";
+      document.getElementById("memberNotes").value = member.notes || "";
+      deleteMemberBtn.style.display = member.id ? "inline-flex" : "none";
+      document.getElementById("memberModalTitle").textContent = member.id ? "编辑会员" : "新增会员";
+      memberModalBackdrop.classList.add("open");
+    }
+
+    function closeMemberModal() {
+      memberModalBackdrop.classList.remove("open");
+      memberForm.reset();
+    }
+
+    function memberFormData() {
+      const id = document.getElementById("memberRecordId").value || newId("mem");
+      const existing = members.find((member) => member.id === id);
+      return {
+        id,
+        name: document.getElementById("memberName").value.trim(),
+        phone: document.getElementById("memberPhone").value.trim(),
+        level: document.getElementById("memberLevel").value.trim(),
+        openedAt: document.getElementById("memberOpenedAt").value,
+        expiresAt: document.getElementById("memberExpiresAt").value,
+        packageName: document.getElementById("memberPackage").value.trim(),
+        remainingTimes: document.getElementById("memberRemainingTimes").value,
+        balance: document.getElementById("memberBalance").value,
+        totalSpend: document.getElementById("memberTotalSpend").value,
+        lastVisitAt: document.getElementById("memberLastVisitAt").value,
+        status: document.getElementById("memberStatus").value,
+        notes: document.getElementById("memberNotes").value.trim(),
+        createdAt: existing?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    }
+
+    async function saveMemberForm(event) {
+      event.preventDefault();
+      let member = memberFormData();
+      if (!member.name) {
+        alert("请填写会员姓名。");
+        return;
+      }
+      if (!member.phone) {
+        alert("请填写手机号，用于预约时识别会员。");
+        return;
+      }
+      const duplicate = members.find((item) => item.id !== member.id && normalizePhone(item.phone) === normalizePhone(member.phone));
+      if (duplicate) {
+        alert("该手机号已存在于会员资料中。");
+        return;
+      }
+      const index = members.findIndex((item) => item.id === member.id);
+      if (index >= 0) {
+        members[index] = member;
+      } else {
+        members.push(member);
+      }
+      saveMembers();
+      if (config.storageMode === "googleSheets" && config.apiUrl) {
+        await pushCloudData();
+      }
+      closeMemberModal();
+      renderMembers();
+      renderGrid();
+      if (config.storageMode === "supabase") {
+        try {
+          setSyncStatus("正在保存会员到 Supabase...");
+          const savedMember = await saveSupabaseMember(member);
+          members = members.map((item) => item.id === member.id ? savedMember : item);
+          saveMembers();
+          setSyncStatus("会员已保存到 Supabase。", "ok");
+          render();
+        } catch (error) {
+          const message = formatSupabaseError(error, "会员已先保存在前端，但 Supabase 没有写入成功");
+          setSyncStatus(message, "error");
+          alert(message);
+        }
+      }
+    }
+
+    async function deleteCurrentMember() {
+      const id = document.getElementById("memberRecordId").value;
+      if (!id) return;
+      if (!confirm("确定删除这位会员吗？预约记录不会被删除。")) return;
+      members = members.filter((member) => member.id !== id);
+      records = records.map((record) => record.memberId === id ? { ...record, memberId: "" } : record);
+      saveMembers();
+      saveRecords();
+      if (config.storageMode === "supabase") {
+        await deleteSupabaseMember(id);
+      } else if (config.storageMode === "googleSheets" && config.apiUrl) {
+        await pushCloudData();
+      }
+      closeMemberModal();
+      render();
+    }
+
+    function fillSettingsHourSelects() {
+      const openSelect = document.getElementById("settingOpenHour");
+      const closeSelect = document.getElementById("settingCloseHour");
+      openSelect.innerHTML = "";
+      closeSelect.innerHTML = "";
+      for (let hour = 0; hour <= 23; hour += 1) {
+        const openOption = document.createElement("option");
+        openOption.value = hour;
+        openOption.textContent = `${pad(hour)}:00`;
+        openSelect.appendChild(openOption);
+      }
+      for (let hour = 1; hour <= 24; hour += 1) {
+        const closeOption = document.createElement("option");
+        closeOption.value = hour;
+        closeOption.textContent = `${pad(hour === 24 ? 0 : hour)}:00${hour === 24 ? " 次日" : ""}`;
+        closeSelect.appendChild(closeOption);
+      }
+    }
+
+    function openSettings() {
+      fillSettingsHourSelects();
+      document.getElementById("settingYear").value = config.year;
+      document.getElementById("settingMonth").value = config.month;
+      document.getElementById("settingOpenHour").value = config.openHour;
+      document.getElementById("settingCloseHour").value = config.closeHour;
+      document.getElementById("settingServices").value = serviceOptions.map((service) => `${service.label},${service.color || "#FFFFFF"},${service.defaultDuration || 90}`).join("\n");
+      document.getElementById("settingRooms").value = roomOptions.map((room) => room.name).join("\n");
+      document.getElementById("settingStaff").value = staffList.map((staff) => `${staff.name},${staff.role}`).join("\n");
+      document.getElementById("settingInstruments").value = instrumentOptions.map((instrument) => instrument.name).join("\n");
+      document.getElementById("storageMode").value = config.storageMode || "local";
+      document.getElementById("supabaseUrl").value = config.supabaseUrl || "";
+      document.getElementById("supabaseKey").value = config.supabaseKey || "";
+      document.getElementById("apiUrl").value = config.apiUrl || "";
+      setSyncStatus(config.storageMode === "supabase" ? "已配置 Supabase，可读取或保存云端数据。" : (config.apiUrl ? "已填写 Google Sheets 接口。" : "当前尚未连接云端。"));
+      settingsBackdrop.classList.add("open");
+    }
+
+    function closeSettings() {
+      settingsBackdrop.classList.remove("open");
+    }
+
+    function parseStaffList(value) {
+      return value
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const [name, role = "美容师"] = line.split(",").map((part) => part.trim());
+          return { name, role };
+        })
+        .filter((staff) => staff.name);
+    }
+
+    function parseServices(value) {
+      return value
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line, index) => {
+          const [label, color = "#FFFFFF", defaultDuration = "90"] = line.split(",").map((part) => part.trim());
+          return { label, color, defaultDuration: Number(defaultDuration) || 90, sortOrder: index + 1 };
+        })
+        .filter((service) => service.label);
+    }
+
+    function parseNameList(value) {
+      return value
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((name, index) => ({ name, sortOrder: index + 1 }));
+    }
+
+    async function saveSettings(event) {
+      event.preventDefault();
+      const nextConfig = {
+        ...config,
+        year: Number(document.getElementById("settingYear").value),
+        month: Number(document.getElementById("settingMonth").value),
+        openHour: Number(document.getElementById("settingOpenHour").value),
+        closeHour: Number(document.getElementById("settingCloseHour").value),
+        storageMode: document.getElementById("storageMode").value,
+        supabaseUrl: document.getElementById("supabaseUrl").value.trim(),
+        supabaseKey: document.getElementById("supabaseKey").value.trim(),
+        apiUrl: document.getElementById("apiUrl").value.trim(),
+        staffList: parseStaffList(document.getElementById("settingStaff").value)
+      };
+      const nextServices = parseServices(document.getElementById("settingServices").value);
+      const nextRooms = parseNameList(document.getElementById("settingRooms").value);
+      const nextInstruments = parseNameList(document.getElementById("settingInstruments").value);
+      if (nextConfig.openHour >= nextConfig.closeHour) {
+        alert("结束营业时间必须晚于开始营业时间。");
+        return;
+      }
+      if (!nextConfig.staffList.length) {
+        alert("请至少保留一位人员。");
+        return;
+      }
+      if (!nextServices.length) {
+        alert("请至少保留一个服务项目。");
+        return;
+      }
+      saveRecords();
+      applyConfig(nextConfig);
+      serviceOptions = nextServices;
+      roomOptions = nextRooms;
+      instrumentOptions = nextInstruments;
+      saveConfig();
+      if (config.storageMode === "supabase") {
+        try {
+          setSyncStatus("正在保存到 Supabase...");
+          await saveSupabaseSettings(nextConfig);
+          await saveSupabaseContent(nextServices, nextRooms, nextConfig.staffList, nextInstruments);
+          setSyncStatus("已保存到 Supabase。", "ok");
+        } catch (error) {
+          const message = formatSupabaseError(error, "本地已经保存并刷新，但 Supabase 没有写入成功");
+          setSyncStatus(message, "error");
+          alert(message);
+          render();
+          return;
+        }
+      }
+      if (config.storageMode === "googleSheets" && config.apiUrl) {
+        await pushCloudData();
+      }
+      closeSettings();
+      render();
+    }
+
+    function setSyncStatus(message, type = "") {
+      syncStatus.textContent = message;
+      syncStatus.className = `sync-status ${type}`.trim();
+    }
+
+    function formatSupabaseError(error, prefix = "Supabase 操作失败") {
+      const code = error?.code ? `（${error.code}）` : "";
+      const detail = error?.message || String(error || "未知错误");
+      const lower = detail.toLowerCase();
+      if (
+        error?.code === "42501" ||
+        error?.status === 401 ||
+        lower.includes("row-level security") ||
+        lower.includes("permission denied") ||
+        lower.includes("not allowed")
+      ) {
+        return `${prefix}：当前 Supabase RLS/权限策略不允许前端写入${code}。请在 Supabase 的 SQL Editor 运行 supabase-rls-policies.sql 后再试。原始提示：${detail}`;
+      }
+      return `${prefix}${code}：${detail}`;
+    }
+
+    function cloudPayload() {
+      return {
+        config,
+        appointments: records,
+        members,
+        exportedAt: new Date().toISOString()
+      };
+    }
+
+    async function callCloud(action, payload = {}) {
+      if (!config.apiUrl) {
+        throw new Error("请先在“修改表格”里填写 Google Apps Script 接口。");
+      }
+      const response = await fetch(config.apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action, ...payload })
+      });
+      const result = await response.json();
+      if (!result.ok) {
+        throw new Error(result.message || "云端接口返回失败。");
+      }
+      return result;
+    }
+
+    async function pushCloudData() {
+      try {
+        setSyncStatus("正在同步到 Google Sheets...");
+        await callCloud("saveAll", cloudPayload());
+        setSyncStatus("已同步到 Google Sheets。", "ok");
+      } catch (error) {
+        setSyncStatus(error.message, "error");
+        alert(error.message);
+      }
+    }
+
+    async function pullCloudData() {
+      try {
+        setSyncStatus("正在读取 Google Sheets...");
+        const result = await callCloud("getAll", {});
+        if (result.config) {
+          applyConfig({ ...config, ...result.config, apiUrl: config.apiUrl, storageMode: config.storageMode });
+          saveConfig();
+        }
+        records = Array.isArray(result.appointments) ? result.appointments : [];
+        saveRecords();
+        members = Array.isArray(result.members) ? result.members : [];
+        saveMembers();
+        setSyncStatus("已读取 Google Sheets 数据。", "ok");
+        render();
+      } catch (error) {
+        setSyncStatus(error.message, "error");
+        alert(error.message);
+      }
+    }
+
+    function mapSupabaseMember(row) {
+      return {
+        id: row.id,
+        name: row.name || "",
+        phone: row.phone || "",
+        level: row.level || "普通会员",
+        openedAt: row.opened_at || "",
+        expiresAt: row.expires_at || "",
+        packageName: row.package_name || "",
+        remainingTimes: row.remaining_times ?? 0,
+        balance: row.balance ?? 0,
+        totalSpend: row.total_spend ?? 0,
+        lastVisitAt: row.last_visit_at || "",
+        status: row.status || "有效",
+        notes: row.notes || "",
+        createdAt: row.created_at || "",
+        updatedAt: row.updated_at || ""
+      };
+    }
+
+    function mapSupabaseAppointment(row) {
+      return {
+        id: row.id,
+        type: row.type || "appointment",
+        status: row.status || "confirmed",
+        date: row.appointment_date,
+        startTime: row.start_time,
+        duration: Number(row.duration || 90),
+        customer: row.customer || "",
+        phone: row.phone || "",
+        memberId: row.member_id || "",
+        service: row.service_name || "",
+        staff: row.staff_name || "",
+        room: row.room_name || "",
+        instrument: row.instrument_name || "",
+        notes: row.notes || "",
+        createdBy: row.created_by || "",
+        createdAt: row.created_at || "",
+        updatedAt: row.updated_at || ""
+      };
+    }
+
+    function supabaseMemberPayload(member) {
+      return {
+        id: isUuid(member.id) ? member.id : undefined,
+        name: member.name,
+        phone: member.phone,
+        level: member.level || "普通会员",
+        opened_at: member.openedAt || null,
+        expires_at: member.expiresAt || null,
+        package_name: member.packageName || null,
+        remaining_times: Number(member.remainingTimes || 0),
+        balance: Number(member.balance || 0),
+        total_spend: Number(member.totalSpend || 0),
+        last_visit_at: member.lastVisitAt || null,
+        status: member.status || "有效",
+        notes: member.notes || null,
+        updated_at: new Date().toISOString()
+      };
+    }
+
+    function supabaseAppointmentPayload(record) {
+      const member = findMemberById(record.memberId) || findMemberByPhone(record.phone);
+      const service = serviceOptions.find((item) => item.label === record.service);
+      const staff = staffList.find((item) => item.name === record.staff);
+      const room = roomOptions.find((item) => item.name === record.room);
+      const instrument = instrumentOptions.find((item) => item.name === record.instrument);
+      return {
+        id: isUuid(record.id) ? record.id : undefined,
+        type: record.type || "appointment",
+        status: record.status || "confirmed",
+        appointment_date: record.date,
+        start_time: record.startTime,
+        duration: Number(record.duration || 90),
+        customer: record.customer || null,
+        phone: record.phone || null,
+        member_id: member?.id && isUuid(member.id) ? member.id : null,
+        service_id: service?.id && isUuid(service.id) ? service.id : null,
+        service_name: record.service || null,
+        staff_id: staff?.id && isUuid(staff.id) ? staff.id : null,
+        staff_name: record.staff || null,
+        room_id: room?.id && isUuid(room.id) ? room.id : null,
+        room_name: record.room || null,
+        instrument_id: instrument?.id && isUuid(instrument.id) ? instrument.id : null,
+        instrument_name: record.instrument || null,
+        notes: record.notes || null,
+        created_by: record.createdBy || null,
+        updated_at: new Date().toISOString()
+      };
+    }
+
+    async function pullSupabaseData() {
+      const client = getSupabaseClient();
+      setSyncStatus("正在读取 Supabase...");
+      const [
+        staffResult,
+        servicesResult,
+        roomsResult,
+        instrumentsResult,
+        membersResult,
+        appointmentsResult,
+        settingsResult
+      ] = await Promise.all([
+        client.from("staff").select("*").eq("enabled", true).order("sort_order"),
+        client.from("services").select("*").eq("enabled", true).order("sort_order"),
+        client.from("rooms").select("*").eq("enabled", true).order("sort_order"),
+        client.from("instruments").select("*").eq("enabled", true).order("sort_order"),
+        client.from("members").select("*").order("created_at", { ascending: false }),
+        client.from("appointments").select("*").order("appointment_date").order("start_time"),
+        client.from("app_settings").select("value").eq("key", "business_config").maybeSingle()
+      ]);
+      const error = staffResult.error || servicesResult.error || roomsResult.error || instrumentsResult.error || membersResult.error || appointmentsResult.error || settingsResult.error;
+      if (error) throw error;
+      if (settingsResult.data?.value) {
+        applyConfig({
+          ...config,
+          ...settingsResult.data.value,
+          storageMode: config.storageMode,
+          supabaseUrl: config.supabaseUrl,
+          supabaseKey: config.supabaseKey,
+          apiUrl: config.apiUrl,
+          staffList: config.staffList
+        });
+      }
+      staffList = (staffResult.data || []).map((row) => ({ id: row.id, name: row.name, role: row.role }));
+      serviceOptions = (servicesResult.data || []).map((row) => ({ id: row.id, label: row.name, color: row.color || "#FFFFFF", defaultDuration: row.default_duration || 90 }));
+      roomOptions = (roomsResult.data || []).map((row) => ({ id: row.id, name: row.name }));
+      instrumentOptions = (instrumentsResult.data || []).map((row) => ({ id: row.id, name: row.name }));
+      members = (membersResult.data || []).map(mapSupabaseMember);
+      records = (appointmentsResult.data || []).map(mapSupabaseAppointment);
+      config.staffList = staffList;
+      saveConfig();
+      saveMembers();
+      saveRecords();
+      setSyncStatus("已读取 Supabase 数据。", "ok");
+      render();
+    }
+
+    async function saveSupabaseSettings(nextConfig) {
+      const payload = {
+        key: "business_config",
+        value: {
+          year: Number(nextConfig.year),
+          month: Number(nextConfig.month),
+          openHour: Number(nextConfig.openHour),
+          closeHour: Number(nextConfig.closeHour),
+          slotMinutes: Number(nextConfig.slotMinutes || 30)
+        },
+        updated_at: new Date().toISOString()
+      };
+      const { error } = await getSupabaseClient().from("app_settings").upsert(payload);
+      if (error) throw error;
+    }
+
+    async function saveSupabaseAppointment(record) {
+      const client = getSupabaseClient();
+      const payload = supabaseAppointmentPayload(record);
+      const query = payload.id
+        ? client.from("appointments").upsert(payload).select().single()
+        : client.from("appointments").insert(payload).select().single();
+      const { data, error } = await query;
+      if (error) throw error;
+      const mapped = mapSupabaseAppointment(data);
+      return mapped;
+    }
+
+    async function deleteSupabaseAppointment(id) {
+      if (!isUuid(id)) return;
+      const { error } = await getSupabaseClient().from("appointments").delete().eq("id", id);
+      if (error) throw error;
+    }
+
+    async function saveSupabaseMember(member) {
+      const client = getSupabaseClient();
+      const payload = supabaseMemberPayload(member);
+      const query = payload.id
+        ? client.from("members").upsert(payload).select().single()
+        : client.from("members").insert(payload).select().single();
+      const { data, error } = await query;
+      if (error) throw error;
+      const mapped = mapSupabaseMember(data);
+      return mapped;
+    }
+
+    async function deleteSupabaseMember(id) {
+      if (!isUuid(id)) return;
+      const { error } = await getSupabaseClient().from("members").delete().eq("id", id);
+      if (error) throw error;
+    }
+
+    async function saveSupabaseContent(services, rooms, staff, instruments) {
+      const client = getSupabaseClient();
+      async function saveByName(table, rows, toPayload) {
+        const { data: existingRows, error: readError } = await client.from(table).select("id,name");
+        if (readError) throw { ...readError, message: `${table}: ${readError.message}` };
+        const existingByName = new Map((existingRows || []).map((row) => [row.name, row]));
+        const nextNames = new Set(rows.map((row) => row.name));
+        for (const row of rows) {
+          const existing = existingByName.get(row.name);
+          const payload = toPayload(row);
+          if (existing) {
+            const { error } = await client.from(table).update(payload).eq("id", existing.id);
+            if (error) throw { ...error, message: `${table}: ${error.message}` };
+          } else {
+            const { error } = await client.from(table).insert(payload);
+            if (error) throw { ...error, message: `${table}: ${error.message}` };
+          }
+        }
+        const removeIds = (existingRows || []).filter((row) => !nextNames.has(row.name)).map((row) => row.id);
+        if (removeIds.length) {
+          const { error } = await client.from(table).update({ enabled: false, updated_at: new Date().toISOString() }).in("id", removeIds);
+          if (error) throw { ...error, message: `${table}: ${error.message}` };
+        }
+      }
+
+      await saveByName("services", services.map((service, index) => ({ ...service, sortOrder: index + 1 })), (service) => ({
+        name: service.label,
+        color: service.color || "#FFFFFF",
+        default_duration: Number(service.defaultDuration || 90),
+        enabled: true,
+        sort_order: service.sortOrder,
+        updated_at: new Date().toISOString()
+      }));
+
+      await saveByName("rooms", rooms.map((room, index) => ({ ...room, sortOrder: index + 1 })), (room) => ({
+        name: room.name,
+        enabled: true,
+        sort_order: room.sortOrder,
+        updated_at: new Date().toISOString()
+      }));
+
+      await saveByName("staff", staff.map((person, index) => ({ ...person, sortOrder: index + 1 })), (person) => ({
+        name: person.name,
+        role: person.role || "美容师",
+        enabled: true,
+        sort_order: person.sortOrder,
+        updated_at: new Date().toISOString()
+      }));
+
+      await saveByName("instruments", instruments.map((instrument, index) => ({ ...instrument, sortOrder: index + 1 })), (instrument) => ({
+        name: instrument.name,
+        enabled: true,
+        sort_order: instrument.sortOrder,
+        updated_at: new Date().toISOString()
+      }));
+    }
+
+    async function readCloudData() {
+      try {
+        if (config.storageMode === "supabase") {
+          await pullSupabaseData();
+        } else if (config.storageMode === "googleSheets") {
+          await pullCloudData();
+        } else {
+          setSyncStatus("当前使用浏览器本地数据。", "ok");
+          render();
+        }
+      } catch (error) {
+        const message = config.storageMode === "supabase"
+          ? formatSupabaseError(error, "读取云端失败")
+          : (error.message || String(error));
+        setSyncStatus(message, "error");
+        alert(message);
+      }
+    }
+
+    function updateLoginState() {
+      const isLoggedIn = localStorage.getItem("beautySchedulerLoggedIn") === "yes";
+      document.getElementById("loginScreen").classList.toggle("hidden", isLoggedIn);
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const user = document.getElementById("loginUser").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      const message = document.getElementById("loginMessage");
+      if (user === "admin" && password === "admin123") {
+        localStorage.setItem("beautySchedulerLoggedIn", "yes");
+        message.textContent = "登录成功。";
+        message.className = "sync-status ok";
+        updateLoginState();
+        return;
+      }
+      message.textContent = "账号或密码不正确。";
+      message.className = "sync-status error";
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("beautySchedulerLoggedIn");
+      updateLoginState();
+    });
+
+    document.getElementById("newBtn").addEventListener("click", () => openModal({
+      date: dateValue(selectedDay),
+      startTime: minutesToTime(openMinutes),
+      staff: staffList[0].name,
+      duration: config.defaultDuration,
+      status: "confirmed",
+      type: "appointment"
+    }));
+    document.getElementById("exportBtn").addEventListener("click", exportExcel);
+    document.getElementById("exportMembersBtn").addEventListener("click", exportMembersExcel);
+    document.getElementById("pullCloudBtn").addEventListener("click", readCloudData);
+    document.getElementById("settingsBtn").addEventListener("click", openSettings);
+    document.getElementById("ruleEditBtn").addEventListener("click", openSettings);
+    document.getElementById("settingsCloseBtn").addEventListener("click", closeSettings);
+    document.getElementById("settingsCancelBtn").addEventListener("click", closeSettings);
+    settingsForm.addEventListener("submit", saveSettings);
+    document.getElementById("closeBtn").addEventListener("click", closeModal);
+    document.getElementById("cancelBtn").addEventListener("click", closeModal);
+    deleteBtn.addEventListener("click", deleteCurrentRecord);
+    form.addEventListener("submit", saveForm);
+    document.getElementById("phone").addEventListener("input", updateMemberHint);
+    document.getElementById("newMemberBtn").addEventListener("click", () => openMemberModal());
+    document.getElementById("memberCloseBtn").addEventListener("click", closeMemberModal);
+    document.getElementById("memberCancelBtn").addEventListener("click", closeMemberModal);
+    deleteMemberBtn.addEventListener("click", deleteCurrentMember);
+    memberForm.addEventListener("submit", saveMemberForm);
+    document.getElementById("memberSearch").addEventListener("input", renderMembers);
+    document.getElementById("clearMemberSearchBtn").addEventListener("click", () => {
+      document.getElementById("memberSearch").value = "";
+      renderMembers();
+    });
+    document.querySelectorAll(".module-btn").forEach((button) => {
+      button.addEventListener("click", () => switchModule(button.dataset.module));
+    });
+    document.querySelectorAll(".subnav-btn").forEach((button) => {
+      button.addEventListener("click", () => switchAppointmentPage(button.dataset.appointmentPage));
+    });
+    document.getElementById("prevDayBtn").addEventListener("click", () => {
+      selectedDay = selectedDay <= 1 ? daysInMonth : selectedDay - 1;
+      render();
+    });
+    document.getElementById("nextDayBtn").addEventListener("click", () => {
+      selectedDay = selectedDay >= daysInMonth ? 1 : selectedDay + 1;
+      render();
+    });
+    ["date", "startTime", "duration", "staff"].forEach((id) => {
+      document.getElementById(id).addEventListener("change", updateConflictWarning);
+    });
+    modalBackdrop.addEventListener("click", (event) => {
+      if (event.target === modalBackdrop) closeModal();
+    });
+    settingsBackdrop.addEventListener("click", (event) => {
+      if (event.target === settingsBackdrop) closeSettings();
+    });
+    memberModalBackdrop.addEventListener("click", (event) => {
+      if (event.target === memberModalBackdrop) closeMemberModal();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && modalBackdrop.classList.contains("open")) closeModal();
+      if (event.key === "Escape" && settingsBackdrop.classList.contains("open")) closeSettings();
+      if (event.key === "Escape" && memberModalBackdrop.classList.contains("open")) closeMemberModal();
+    });
+
+    render();
+    switchAppointmentPage("dashboard");
+    updateLoginState();
+  </script>
+</body>
+</html>
