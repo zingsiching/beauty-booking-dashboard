@@ -1041,14 +1041,14 @@
       <div class="login-subtitle">请输入本地账号密码进入预约与会员系统。</div>
       <div class="field">
         <label for="loginUser">账号</label>
-        <input id="loginUser" autocomplete="username" placeholder="admin">
+        <input id="loginUser" autocomplete="username" placeholder="请输入账号">
       </div>
       <div class="field" style="margin-top:14px;">
         <label for="loginPassword">密码</label>
-        <input id="loginPassword" type="password" autocomplete="current-password" placeholder="admin123">
+        <input id="loginPassword" type="password" autocomplete="current-password" placeholder="请输入密码">
       </div>
       <button class="btn primary" style="width:100%; justify-content:center; margin-top:20px;" type="submit">登录</button>
-      <div class="sync-status" id="loginMessage">默认账号：admin / admin123</div>
+      <div class="sync-status" id="loginMessage"></div>
     </form>
   </section>
 
@@ -1456,6 +1456,7 @@
           </div>
         </div>
         <div class="modal-foot">
+          <button class="btn" type="button" id="testSupabaseBtn">测试云端写入</button>
           <button class="btn" type="button" id="settingsCancelBtn">取消</button>
           <button class="btn primary" type="submit">保存设置</button>
         </div>
@@ -2493,6 +2494,54 @@
       settingsBackdrop.classList.remove("open");
     }
 
+    async function testSupabaseWrite() {
+      const nextConfig = {
+        ...config,
+        storageMode: document.getElementById("storageMode").value,
+        supabaseUrl: document.getElementById("supabaseUrl").value.trim(),
+        supabaseKey: document.getElementById("supabaseKey").value.trim()
+      };
+      const previousConfig = config;
+      config = nextConfig;
+      try {
+        setSyncStatus("正在测试 Supabase 写入...");
+        const client = getSupabaseClient();
+        const testName = `CODEx测试-${Date.now()}`;
+        const { error: settingsError } = await client.from("app_settings").upsert({
+          key: "codex_permission_test",
+          value: { ok: true, checkedAt: new Date().toISOString() },
+          updated_at: new Date().toISOString()
+        });
+        if (settingsError) throw { ...settingsError, message: `app_settings: ${settingsError.message}` };
+
+        const { data: serviceData, error: serviceError } = await client
+          .from("services")
+          .insert({
+            name: testName,
+            color: "#FFFFFF",
+            default_duration: 30,
+            enabled: false,
+            sort_order: 999,
+            updated_at: new Date().toISOString()
+          })
+          .select("id")
+          .single();
+        if (serviceError) throw { ...serviceError, message: `services: ${serviceError.message}` };
+
+        const { error: deleteError } = await client.from("services").delete().eq("id", serviceData.id);
+        if (deleteError) throw { ...deleteError, message: `services delete: ${deleteError.message}` };
+
+        setSyncStatus("Supabase 写入测试成功。", "ok");
+        alert("Supabase 写入测试成功：设置表、服务项目表都可以写入。");
+      } catch (error) {
+        const message = formatSupabaseError(error, "Supabase 写入测试失败");
+        setSyncStatus(message, "error");
+        alert(message);
+      } finally {
+        config = previousConfig;
+      }
+    }
+
     function parseStaffList(value) {
       return value
         .split("\n")
@@ -2963,6 +3012,7 @@
     document.getElementById("pullCloudBtn").addEventListener("click", readCloudData);
     document.getElementById("settingsBtn").addEventListener("click", openSettings);
     document.getElementById("ruleEditBtn").addEventListener("click", openSettings);
+    document.getElementById("testSupabaseBtn").addEventListener("click", testSupabaseWrite);
     document.getElementById("settingsCloseBtn").addEventListener("click", closeSettings);
     document.getElementById("settingsCancelBtn").addEventListener("click", closeSettings);
     settingsForm.addEventListener("submit", saveSettings);
