@@ -3325,7 +3325,7 @@
     document.querySelectorAll(".module-btn").forEach((button) => {
       button.addEventListener("click", () => switchModule(button.dataset.module));
     });
-    document.querySelectorAll(".subnav-btn").forEach((button) => {
+    document.querySelectorAll("[data-appointment-page]").forEach((button) => {
       button.addEventListener("click", () => switchAppointmentPage(button.dataset.appointmentPage));
     });
     document.getElementById("prevDayBtn").addEventListener("click", () => {
