@@ -220,6 +220,28 @@
       font-weight: 900;
     }
 
+    .side-subnav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .side-subnav-btn {
+      min-height: 38px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      text-align: left;
+      padding: 0 12px;
+      font-weight: 800;
+    }
+
+    .side-subnav-btn.active {
+      background: #fff;
+      color: var(--brand);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+    }
+
     .module-panel.hidden,
     .page-module.hidden,
     .appointment-page.hidden {
@@ -490,6 +512,60 @@
       font-size: 12px;
       font-weight: 800;
       margin-bottom: 8px;
+    }
+
+    .customer-layout {
+      padding: 18px 22px 26px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .customer-tools {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .customer-tools select,
+    .customer-tools input {
+      min-height: 38px;
+      border: 1px solid var(--line-strong);
+      border-radius: 7px;
+      background: #fff;
+      padding: 0 12px;
+    }
+
+    .customer-tools input {
+      width: min(420px, 100%);
+    }
+
+    .data-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      overflow: auto;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, 0.06);
+    }
+
+    .data-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+    }
+
+    .data-table th,
+    .data-table td {
+      border-bottom: 1px solid var(--line);
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    .data-table th {
+      color: var(--muted);
+      background: #f7f8fa;
+      font-weight: 900;
     }
 
     .legend-dot {
@@ -1015,6 +1091,10 @@
         padding: 14px;
       }
 
+      .customer-layout {
+        padding: 14px;
+      }
+
       .member-grid {
         grid-template-columns: 1fr;
       }
@@ -1068,6 +1148,13 @@
       </nav>
 
       <div class="module-panel" id="appointmentSidebar">
+        <div class="section-title">预约页面</div>
+        <div class="side-subnav" aria-label="预约页面">
+          <button class="side-subnav-btn active" type="button" data-appointment-page="dashboard">预约数据看板</button>
+          <button class="side-subnav-btn" type="button" data-appointment-page="daily">当日预约管理</button>
+          <button class="side-subnav-btn" type="button" data-appointment-page="stylists">美容师客户管理</button>
+        </div>
+
         <div class="section-title">当前规则</div>
         <div class="side-card rule-card">
           <div>
@@ -1107,16 +1194,12 @@
           <h1 class="page-title" id="pageTitle">预约数据看板</h1>
           <div class="page-meta" id="pageMeta"></div>
           <div class="summary-row" id="summaryRow"></div>
-          <div class="subnav" aria-label="预约页面">
-            <button class="subnav-btn active" type="button" data-appointment-page="dashboard">预约数据看板</button>
-            <button class="subnav-btn" type="button" data-appointment-page="daily">当日预约管理</button>
-            <button class="subnav-btn" type="button" data-appointment-page="monthly">当月预约</button>
-          </div>
         </div>
         <div class="toolbar-actions">
           <button class="btn" type="button" id="pullCloudBtn">刷新云端数据</button>
           <button class="btn" type="button" id="settingsBtn">修改看板内容</button>
           <button class="btn" type="button" id="exportBtn">导出当月预约记录</button>
+          <button class="btn stylist-only" type="button" id="exportStylistBtn">导出美容师客户</button>
           <button class="btn primary" type="button" id="newBtn">新增预约</button>
           <div class="view-switch schedule-only" aria-label="视图切换">
             <button class="active" type="button">人员</button>
@@ -1185,6 +1268,30 @@
             <div class="grid-wrap" id="gridWrap"></div>
           </div>
         </section>
+      </section>
+
+      <section class="appointment-page hidden" id="stylistPage">
+        <div class="customer-layout">
+          <div class="customer-tools">
+            <select id="stylistFilter"></select>
+            <input id="stylistSearch" autocomplete="off" placeholder="搜索客户姓名、手机号、美容师">
+            <button class="btn" type="button" id="clearStylistSearchBtn">清空</button>
+          </div>
+          <div class="data-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>美容师名称</th>
+                  <th>接待客户名称</th>
+                  <th>手机号</th>
+                  <th>日期</th>
+                  <th>项目</th>
+                </tr>
+              </thead>
+              <tbody id="stylistCustomerBody"></tbody>
+            </table>
+          </div>
+        </div>
       </section>
       </section>
 
@@ -1881,7 +1988,7 @@
       const titles = {
         dashboard: "预约数据看板",
         daily: "当日预约管理",
-        monthly: "当月预约"
+        stylists: "美容师客户管理"
       };
       pageTitle.textContent = titles[currentAppointmentPage] || "预约管理";
       pageMeta.textContent = `${monthLabel()} · 营业时间 ${minutesToTime(openMinutes)} - ${minutesToTime(closeMinutes)}`;
@@ -1896,21 +2003,27 @@
       renderGrid();
       renderDashboard();
       renderMembers();
+      renderStylistCustomers();
       updateMemberStats();
     }
 
     function switchAppointmentPage(pageName) {
       currentAppointmentPage = pageName;
-      document.querySelectorAll(".subnav-btn").forEach((button) => {
+      document.querySelectorAll("[data-appointment-page]").forEach((button) => {
         button.classList.toggle("active", button.dataset.appointmentPage === pageName);
       });
       document.getElementById("dashboardPage").classList.toggle("hidden", pageName !== "dashboard");
-      document.getElementById("schedulePage").classList.toggle("hidden", pageName === "dashboard");
+      document.getElementById("schedulePage").classList.toggle("hidden", pageName !== "daily");
+      document.getElementById("stylistPage").classList.toggle("hidden", pageName !== "stylists");
       document.querySelectorAll(".schedule-only").forEach((element) => {
-        element.style.display = pageName === "dashboard" ? "none" : "";
+        element.style.display = pageName === "daily" ? "" : "none";
+      });
+      document.querySelectorAll(".stylist-only").forEach((element) => {
+        element.style.display = pageName === "stylists" ? "" : "none";
       });
       renderTitle();
       renderDashboard();
+      renderStylistCustomers();
     }
 
     function switchModule(moduleName) {
@@ -2243,7 +2356,7 @@
 
     function exportExcel() {
       const headers = ["预约日期", "开始时间", "结束时间", "客户姓名", "手机号", "是否会员", "会员等级", "服务项目", "美容师", "房间", "仪器", "类型", "预约状态", "备注", "登记人", "创建时间", "更新时间"];
-      const rows = records.map((record) => [
+      const rows = appointmentRecordsFor(year, month).map((record) => [
         record.date,
         record.startTime,
         endTime(record),
@@ -2278,6 +2391,81 @@
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = `${monthLabel()}预约记录.xls`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function stylistCustomerRows() {
+      const prefix = `${year}-${pad(month)}-`;
+      return records
+        .filter((record) => (
+          record.type !== "blocked" &&
+          record.status !== "cancelled" &&
+          record.staff &&
+          record.customer &&
+          String(record.date || "").startsWith(prefix)
+        ))
+        .sort((a, b) => `${a.staff} ${a.date} ${a.startTime}`.localeCompare(`${b.staff} ${b.date} ${b.startTime}`))
+        .map((record) => ({
+          staff: record.staff,
+          customer: record.customer,
+          phone: record.phone || "",
+          date: record.date,
+          service: record.service || ""
+        }));
+    }
+
+    function fillStylistFilter() {
+      const select = document.getElementById("stylistFilter");
+      if (!select) return;
+      const current = select.value || "all";
+      select.innerHTML = "";
+      select.appendChild(new Option("全部美容师", "all"));
+      staffList.forEach((staff) => {
+        select.appendChild(new Option(staff.name, staff.name));
+      });
+      select.value = [...select.options].some((option) => option.value === current) ? current : "all";
+    }
+
+    function renderStylistCustomers() {
+      const body = document.getElementById("stylistCustomerBody");
+      if (!body) return;
+      fillStylistFilter();
+      const filter = document.getElementById("stylistFilter").value;
+      const keyword = (document.getElementById("stylistSearch")?.value || "").trim().toLowerCase();
+      const rows = stylistCustomerRows().filter((row) => {
+        const matchesStaff = filter === "all" || row.staff === filter;
+        const text = `${row.staff} ${row.customer} ${row.phone} ${row.date} ${row.service}`.toLowerCase();
+        return matchesStaff && (!keyword || text.includes(keyword));
+      });
+      if (!rows.length) {
+        body.innerHTML = `<tr><td colspan="5" class="member-meta">当前月份暂无美容师客户记录</td></tr>`;
+        return;
+      }
+      body.innerHTML = rows.map((row) => `
+        <tr>
+          <td>${escapeHtml(row.staff)}</td>
+          <td>${escapeHtml(row.customer)}</td>
+          <td>${escapeHtml(row.phone)}</td>
+          <td>${escapeHtml(row.date)}</td>
+          <td>${escapeHtml(row.service)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function exportStylistCustomersExcel() {
+      const headers = ["美容师名称", "接待客户名称", "手机号", "日期", "项目"];
+      const rows = stylistCustomerRows().map((row) => [row.staff, row.customer, row.phone, row.date, row.service]);
+      const table = [headers, ...rows]
+        .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell || "")}</td>`).join("")}</tr>`)
+        .join("");
+      const html = `<html><head><meta charset="utf-8"></head><body><table border="1">${table}</table></body></html>`;
+      const blob = new Blob(["\ufeff", html], { type: "application/vnd.ms-excel;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${monthLabel()}美容师客户记录.xls`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -3103,6 +3291,7 @@
       type: "appointment"
     }));
     document.getElementById("exportBtn").addEventListener("click", exportExcel);
+    document.getElementById("exportStylistBtn").addEventListener("click", exportStylistCustomersExcel);
     document.getElementById("exportMembersBtn").addEventListener("click", exportMembersExcel);
     document.getElementById("pullCloudBtn").addEventListener("click", readCloudData);
     document.getElementById("settingsBtn").addEventListener("click", openSettings);
@@ -3125,6 +3314,13 @@
     document.getElementById("clearMemberSearchBtn").addEventListener("click", () => {
       document.getElementById("memberSearch").value = "";
       renderMembers();
+    });
+    document.getElementById("stylistFilter").addEventListener("change", renderStylistCustomers);
+    document.getElementById("stylistSearch").addEventListener("input", renderStylistCustomers);
+    document.getElementById("clearStylistSearchBtn").addEventListener("click", () => {
+      document.getElementById("stylistSearch").value = "";
+      document.getElementById("stylistFilter").value = "all";
+      renderStylistCustomers();
     });
     document.querySelectorAll(".module-btn").forEach((button) => {
       button.addEventListener("click", () => switchModule(button.dataset.module));
