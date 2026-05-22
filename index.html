@@ -430,6 +430,11 @@
       gap: 16px;
     }
 
+    .review-dashboard {
+      padding: 0;
+      grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.8fr);
+    }
+
     .dashboard-module {
       background: #fff;
       border: 1px solid var(--line);
@@ -1153,6 +1158,7 @@
           <button class="side-subnav-btn active" type="button" data-appointment-page="dashboard">预约数据看板</button>
           <button class="side-subnav-btn" type="button" data-appointment-page="daily">当日预约管理</button>
           <button class="side-subnav-btn" type="button" data-appointment-page="stylists">美容师客户管理</button>
+          <button class="side-subnav-btn" type="button" data-appointment-page="monthlyReview">月度数据回顾</button>
         </div>
 
         <div class="section-title">当前规则</div>
@@ -1289,6 +1295,54 @@
                 </tr>
               </thead>
               <tbody id="stylistCustomerBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="appointment-page hidden" id="monthlyReviewPage">
+        <div class="customer-layout">
+          <div class="customer-tools">
+            <select id="reviewYear"></select>
+            <select id="reviewMonth"></select>
+            <button class="btn" type="button" id="exportReviewBtn">导出月度回顾</button>
+          </div>
+          <div class="dashboard review-dashboard">
+            <div class="dashboard-module">
+              <div class="module-title">月度预约概览</div>
+              <div class="metric-grid">
+                <div class="metric-card">
+                  <div class="metric-label">预约单数</div>
+                  <div class="metric-number" id="reviewAppointmentCount">0</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">预约客户数</div>
+                  <div class="metric-number" id="reviewCustomerCount">0</div>
+                </div>
+              </div>
+              <div class="chart-card">
+                <div class="module-title">项目排行</div>
+                <div class="rank-list" id="reviewServiceRankList"></div>
+              </div>
+            </div>
+            <div class="dashboard-module">
+              <div class="module-title">美容师接待排行</div>
+              <div class="rank-list" id="reviewStylistRankList"></div>
+            </div>
+          </div>
+          <div class="data-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>日期</th>
+                  <th>美容师</th>
+                  <th>客户</th>
+                  <th>手机号</th>
+                  <th>项目</th>
+                  <th>房间</th>
+                </tr>
+              </thead>
+              <tbody id="reviewDetailBody"></tbody>
             </table>
           </div>
         </div>
@@ -1618,6 +1672,8 @@
     let staffList = config.staffList;
     let currentModule = "appointments";
     let currentAppointmentPage = "dashboard";
+    let reviewYearValue = config.year;
+    let reviewMonthValue = config.month;
 
     const statusMap = {
       confirmed: { label: "已确认", className: "confirmed" },
@@ -1988,7 +2044,8 @@
       const titles = {
         dashboard: "预约数据看板",
         daily: "当日预约管理",
-        stylists: "美容师客户管理"
+        stylists: "美容师客户管理",
+        monthlyReview: "月度数据回顾"
       };
       pageTitle.textContent = titles[currentAppointmentPage] || "预约管理";
       pageMeta.textContent = `${monthLabel()} · 营业时间 ${minutesToTime(openMinutes)} - ${minutesToTime(closeMinutes)}`;
@@ -2004,6 +2061,7 @@
       renderDashboard();
       renderMembers();
       renderStylistCustomers();
+      renderMonthlyReview();
       updateMemberStats();
     }
 
@@ -2015,6 +2073,7 @@
       document.getElementById("dashboardPage").classList.toggle("hidden", pageName !== "dashboard");
       document.getElementById("schedulePage").classList.toggle("hidden", pageName !== "daily");
       document.getElementById("stylistPage").classList.toggle("hidden", pageName !== "stylists");
+      document.getElementById("monthlyReviewPage").classList.toggle("hidden", pageName !== "monthlyReview");
       document.querySelectorAll(".schedule-only").forEach((element) => {
         element.style.display = pageName === "daily" ? "" : "none";
       });
@@ -2024,6 +2083,7 @@
       renderTitle();
       renderDashboard();
       renderStylistCustomers();
+      renderMonthlyReview();
     }
 
     function switchModule(moduleName) {
@@ -2087,6 +2147,31 @@
           <span>${count}单</span>
         </div>
       `).join("");
+    }
+
+    function renderRankList(elementId, items, emptyText) {
+      const list = document.getElementById(elementId);
+      if (!list) return;
+      if (!items.length) {
+        list.innerHTML = `<div class="member-meta">${escapeHtml(emptyText)}</div>`;
+        return;
+      }
+      list.innerHTML = items.map(([label, count], index) => `
+        <div class="rank-item">
+          <span class="rank-index">${index + 1}</span>
+          <span>${escapeHtml(label)}</span>
+          <span>${count}单</span>
+        </div>
+      `).join("");
+    }
+
+    function countBy(recordsList, getter) {
+      const counts = {};
+      recordsList.forEach((record) => {
+        const label = getter(record) || "未填写";
+        counts[label] = (counts[label] || 0) + 1;
+      });
+      return Object.entries(counts).sort((a, b) => b[1] - a[1]);
     }
 
     function dailyCounts(monthRecords, targetYear, targetMonth) {
@@ -2466,6 +2551,93 @@
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = `${monthLabel()}美容师客户记录.xls`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function availableReviewYears() {
+      const years = new Set([year, reviewYearValue]);
+      records.forEach((record) => {
+        const recordYear = Number(String(record.date || "").slice(0, 4));
+        if (recordYear) years.add(recordYear);
+      });
+      return [...years].sort((a, b) => b - a);
+    }
+
+    function fillReviewSelectors() {
+      const yearSelect = document.getElementById("reviewYear");
+      const monthSelect = document.getElementById("reviewMonth");
+      if (!yearSelect || !monthSelect) return;
+      const selectedYear = Number(yearSelect.value || reviewYearValue || year);
+      const selectedMonth = Number(monthSelect.value || reviewMonthValue || month);
+      yearSelect.innerHTML = "";
+      availableReviewYears().forEach((item) => {
+        yearSelect.appendChild(new Option(`${item}年`, item));
+      });
+      monthSelect.innerHTML = "";
+      for (let item = 1; item <= 12; item += 1) {
+        monthSelect.appendChild(new Option(`${item}月`, item));
+      }
+      yearSelect.value = selectedYear;
+      monthSelect.value = selectedMonth;
+      reviewYearValue = Number(yearSelect.value || year);
+      reviewMonthValue = Number(monthSelect.value || month);
+    }
+
+    function reviewRecords() {
+      return appointmentRecordsFor(reviewYearValue, reviewMonthValue)
+        .sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`));
+    }
+
+    function renderMonthlyReview() {
+      const body = document.getElementById("reviewDetailBody");
+      if (!body) return;
+      fillReviewSelectors();
+      const rows = reviewRecords();
+      const customers = new Set(rows.map((record) => normalizePhone(record.phone) || record.customer).filter(Boolean));
+      document.getElementById("reviewAppointmentCount").textContent = rows.length;
+      document.getElementById("reviewCustomerCount").textContent = customers.size;
+      renderRankList("reviewServiceRankList", countBy(rows, (record) => record.service || "其他").slice(0, 8), "该月暂无项目数据");
+      renderRankList("reviewStylistRankList", countBy(rows, (record) => record.staff || "未分配").slice(0, 8), "该月暂无美容师接待数据");
+      if (!rows.length) {
+        body.innerHTML = `<tr><td colspan="6" class="member-meta">该月份暂无预约记录</td></tr>`;
+        return;
+      }
+      body.innerHTML = rows.map((record) => `
+        <tr>
+          <td>${escapeHtml(record.date)}</td>
+          <td>${escapeHtml(record.staff || "未分配")}</td>
+          <td>${escapeHtml(record.customer || "")}</td>
+          <td>${escapeHtml(record.phone || "")}</td>
+          <td>${escapeHtml(record.service || "")}</td>
+          <td>${escapeHtml(record.room || "")}</td>
+        </tr>
+      `).join("");
+    }
+
+    function exportMonthlyReviewExcel() {
+      const headers = ["日期", "开始时间", "结束时间", "美容师", "客户", "手机号", "项目", "房间", "状态"];
+      const rows = reviewRecords().map((record) => [
+        record.date,
+        record.startTime,
+        endTime(record),
+        record.staff,
+        record.customer,
+        record.phone,
+        record.service,
+        record.room,
+        statusMap[record.status]?.label || record.status
+      ]);
+      const table = [headers, ...rows]
+        .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell || "")}</td>`).join("")}</tr>`)
+        .join("");
+      const html = `<html><head><meta charset="utf-8"></head><body><table border="1">${table}</table></body></html>`;
+      const blob = new Blob(["\ufeff", html], { type: "application/vnd.ms-excel;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${reviewYearValue}年${reviewMonthValue}月数据回顾.xls`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -3322,11 +3494,26 @@
       document.getElementById("stylistFilter").value = "all";
       renderStylistCustomers();
     });
-    document.querySelectorAll(".module-btn").forEach((button) => {
-      button.addEventListener("click", () => switchModule(button.dataset.module));
+    document.getElementById("reviewYear").addEventListener("change", (event) => {
+      reviewYearValue = Number(event.target.value);
+      renderMonthlyReview();
     });
-    document.querySelectorAll("[data-appointment-page]").forEach((button) => {
-      button.addEventListener("click", () => switchAppointmentPage(button.dataset.appointmentPage));
+    document.getElementById("reviewMonth").addEventListener("change", (event) => {
+      reviewMonthValue = Number(event.target.value);
+      renderMonthlyReview();
+    });
+    document.getElementById("exportReviewBtn").addEventListener("click", exportMonthlyReviewExcel);
+    document.querySelector(".sidebar").addEventListener("click", (event) => {
+      const moduleButton = event.target.closest("[data-module]");
+      if (moduleButton) {
+        switchModule(moduleButton.dataset.module);
+        return;
+      }
+      const pageButton = event.target.closest("[data-appointment-page]");
+      if (pageButton) {
+        switchModule("appointments");
+        switchAppointmentPage(pageButton.dataset.appointmentPage);
+      }
     });
     document.getElementById("prevDayBtn").addEventListener("click", () => {
       selectedDay = selectedDay <= 1 ? daysInMonth : selectedDay - 1;
