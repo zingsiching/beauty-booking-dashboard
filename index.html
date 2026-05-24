@@ -317,28 +317,6 @@
       border-color: #f0b9c1;
     }
 
-    .view-switch {
-      display: inline-flex;
-      border: 1px solid var(--line-strong);
-      background: rgba(255, 255, 255, 0.86);
-      border-radius: 7px;
-      overflow: hidden;
-    }
-
-    .view-switch button {
-      border: 0;
-      background: transparent;
-      min-height: 36px;
-      padding: 0 14px;
-      color: var(--muted);
-      font-weight: 700;
-    }
-
-    .view-switch button.active {
-      color: #fff;
-      background: var(--teal);
-    }
-
     .subnav {
       display: flex;
       gap: 8px;
@@ -725,7 +703,7 @@
       background: var(--green-bg);
       color: #14532d;
       border-radius: 7px;
-      padding: 7px 8px;
+      padding: 8px 10px;
       overflow: hidden;
       text-align: left;
       box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
@@ -781,8 +759,8 @@
     }
 
     .appt-detail {
-      font-size: 12px;
-      line-height: 1.35;
+      font-size: 11px;
+      line-height: 1.32;
       margin-top: 3px;
       white-space: nowrap;
       overflow: hidden;
@@ -1207,11 +1185,6 @@
           <button class="btn" type="button" id="exportBtn">导出当月预约记录</button>
           <button class="btn stylist-only" type="button" id="exportStylistBtn">导出美容师客户</button>
           <button class="btn primary" type="button" id="newBtn">新增预约</button>
-          <div class="view-switch schedule-only" aria-label="视图切换">
-            <button class="active" type="button">人员</button>
-            <button type="button" disabled>房间</button>
-            <button type="button" disabled>仪器</button>
-          </div>
         </div>
       </header>
 
@@ -1305,6 +1278,7 @@
           <div class="customer-tools">
             <select id="reviewYear"></select>
             <select id="reviewMonth"></select>
+            <select id="reviewDay"></select>
             <button class="btn" type="button" id="exportReviewBtn">导出月度回顾</button>
           </div>
           <div class="dashboard review-dashboard">
@@ -1482,6 +1456,10 @@
           <div class="field">
             <label for="memberLevel">会员等级</label>
             <input id="memberLevel" autocomplete="off" placeholder="普通会员 / VIP">
+          </div>
+          <div class="field">
+            <label for="memberProductDiscount">产品折扣</label>
+            <input id="memberProductDiscount" autocomplete="off" placeholder="例如：8折 / 产品9折 / 无折扣">
           </div>
           <div class="field">
             <label for="memberStatus">会员状态</label>
@@ -1674,6 +1652,7 @@
     let currentAppointmentPage = "dashboard";
     let reviewYearValue = config.year;
     let reviewMonthValue = config.month;
+    let reviewDayValue = "all";
 
     const statusMap = {
       confirmed: { label: "已确认", className: "confirmed" },
@@ -1846,7 +1825,8 @@
 
     function loadMembers() {
       try {
-        return JSON.parse(localStorage.getItem(membersStorageKey)) || [];
+        return (JSON.parse(localStorage.getItem(membersStorageKey)) || [])
+          .map((member) => ({ ...member, productDiscount: member.productDiscount || "无折扣" }));
       } catch (error) {
         return [];
       }
@@ -2003,6 +1983,7 @@
 
       const member = record.memberId ? findMemberById(record.memberId) : findMemberByPhone(record.phone);
       const memberText = member ? `（${member.level || "会员"}）` : "";
+      const discountText = member ? (member.productDiscount || "无折扣") : "无折扣";
       const title = record.type === "blocked" ? (record.notes || "占用") : `${record.customer || "未填写客户"}${memberText}`;
       const service = record.type === "blocked" ? "不可预约" : (record.service || "未填写项目");
       const room = record.room || "未分配";
@@ -2011,6 +1992,7 @@
         <div class="appt-detail">${record.startTime} - ${endTime(record)}</div>
         <div class="appt-detail">房间：${escapeHtml(room)}</div>
         <div class="appt-detail">项目：${escapeHtml(service)}</div>
+        <div class="appt-detail">折扣：${escapeHtml(discountText)}</div>
       `;
       return button;
     }
@@ -2374,13 +2356,13 @@
           document.getElementById("customer").value = member.name || "";
         }
         memberHint.classList.add("ok");
-        memberHint.innerHTML = `<strong>已识别会员：</strong>${escapeHtml(member.name || "")}｜${escapeHtml(member.level || "会员")}｜剩余 ${escapeHtml(member.remainingTimes || 0)} 次｜余额 ${escapeHtml(member.balance || 0)}｜${escapeHtml(member.notes || "无备注")}`;
+        memberHint.innerHTML = `<strong>已识别会员：</strong>${escapeHtml(member.name || "")}｜${escapeHtml(member.level || "会员")}｜产品折扣：${escapeHtml(member.productDiscount || "无折扣")}｜剩余 ${escapeHtml(member.remainingTimes || 0)} 次｜余额 ${escapeHtml(member.balance || 0)}｜${escapeHtml(member.notes || "无备注")}`;
         return;
       }
 
       document.getElementById("memberId").value = "";
       memberHint.classList.remove("ok");
-      memberHint.textContent = phone ? "未匹配到会员。可在会员系统管理中新增该客户。" : "输入会员手机号后，系统会自动识别会员资料。";
+      memberHint.textContent = phone ? "未匹配到会员。产品折扣：无折扣。可在会员系统管理中新增该客户。" : "输入会员手机号后，系统会自动识别会员资料；未识别时产品折扣为无折扣。";
     }
 
     async function saveForm(event) {
@@ -2440,26 +2422,30 @@
     }
 
     function exportExcel() {
-      const headers = ["预约日期", "开始时间", "结束时间", "客户姓名", "手机号", "是否会员", "会员等级", "服务项目", "美容师", "房间", "仪器", "类型", "预约状态", "备注", "登记人", "创建时间", "更新时间"];
-      const rows = appointmentRecordsFor(year, month).map((record) => [
-        record.date,
-        record.startTime,
-        endTime(record),
-        record.customer,
-        record.phone,
-        findMemberById(record.memberId) || findMemberByPhone(record.phone) ? "是" : "否",
-        (findMemberById(record.memberId) || findMemberByPhone(record.phone))?.level || "",
-        record.service,
-        record.staff,
-        record.room,
-        record.instrument,
-        record.type === "blocked" ? "占用" : "预约",
-        record.type === "blocked" ? "占用" : (statusMap[record.status]?.label || record.status),
-        record.notes,
-        record.createdBy,
-        formatDateTime(record.createdAt),
-        formatDateTime(record.updatedAt)
-      ]);
+      const headers = ["预约日期", "开始时间", "结束时间", "客户姓名", "手机号", "是否会员", "会员等级", "产品折扣", "服务项目", "美容师", "房间", "仪器", "类型", "预约状态", "备注", "登记人", "创建时间", "更新时间"];
+      const rows = appointmentRecordsFor(year, month).map((record) => {
+        const member = findMemberById(record.memberId) || findMemberByPhone(record.phone);
+        return [
+          record.date,
+          record.startTime,
+          endTime(record),
+          record.customer,
+          record.phone,
+          member ? "是" : "否",
+          member?.level || "",
+          member?.productDiscount || "无折扣",
+          record.service,
+          record.staff,
+          record.room,
+          record.instrument,
+          record.type === "blocked" ? "占用" : "预约",
+          record.type === "blocked" ? "占用" : (statusMap[record.status]?.label || record.status),
+          record.notes,
+          record.createdBy,
+          formatDateTime(record.createdAt),
+          formatDateTime(record.updatedAt)
+        ];
+      });
 
       const table = [headers, ...rows]
         .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell || "")}</td>`).join("")}</tr>`)
@@ -2569,9 +2555,11 @@
     function fillReviewSelectors() {
       const yearSelect = document.getElementById("reviewYear");
       const monthSelect = document.getElementById("reviewMonth");
-      if (!yearSelect || !monthSelect) return;
+      const daySelect = document.getElementById("reviewDay");
+      if (!yearSelect || !monthSelect || !daySelect) return;
       const selectedYear = Number(yearSelect.value || reviewYearValue || year);
       const selectedMonth = Number(monthSelect.value || reviewMonthValue || month);
+      const selectedDayValue = daySelect.value || reviewDayValue || "all";
       yearSelect.innerHTML = "";
       availableReviewYears().forEach((item) => {
         yearSelect.appendChild(new Option(`${item}年`, item));
@@ -2582,12 +2570,21 @@
       }
       yearSelect.value = selectedYear;
       monthSelect.value = selectedMonth;
+      daySelect.innerHTML = "";
+      daySelect.appendChild(new Option("全部日期", "all"));
+      const days = new Date(selectedYear, selectedMonth, 0).getDate();
+      for (let item = 1; item <= days; item += 1) {
+        daySelect.appendChild(new Option(`${item}日`, String(item)));
+      }
+      daySelect.value = selectedDayValue === "all" || Number(selectedDayValue) <= days ? selectedDayValue : "all";
       reviewYearValue = Number(yearSelect.value || year);
       reviewMonthValue = Number(monthSelect.value || month);
+      reviewDayValue = daySelect.value || "all";
     }
 
     function reviewRecords() {
       return appointmentRecordsFor(reviewYearValue, reviewMonthValue)
+        .filter((record) => reviewDayValue === "all" || Number(String(record.date || "").slice(8, 10)) === Number(reviewDayValue))
         .sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`));
     }
 
@@ -2599,10 +2596,11 @@
       const customers = new Set(rows.map((record) => normalizePhone(record.phone) || record.customer).filter(Boolean));
       document.getElementById("reviewAppointmentCount").textContent = rows.length;
       document.getElementById("reviewCustomerCount").textContent = customers.size;
-      renderRankList("reviewServiceRankList", countBy(rows, (record) => record.service || "其他").slice(0, 8), "该月暂无项目数据");
-      renderRankList("reviewStylistRankList", countBy(rows, (record) => record.staff || "未分配").slice(0, 8), "该月暂无美容师接待数据");
+      const emptyLabel = reviewDayValue === "all" ? "该月份暂无预约记录" : "该日期暂无预约记录";
+      renderRankList("reviewServiceRankList", countBy(rows, (record) => record.service || "其他").slice(0, 8), "暂无项目数据");
+      renderRankList("reviewStylistRankList", countBy(rows, (record) => record.staff || "未分配").slice(0, 8), "暂无美容师接待数据");
       if (!rows.length) {
-        body.innerHTML = `<tr><td colspan="6" class="member-meta">该月份暂无预约记录</td></tr>`;
+        body.innerHTML = `<tr><td colspan="6" class="member-meta">${emptyLabel}</td></tr>`;
         return;
       }
       body.innerHTML = rows.map((record) => `
@@ -2637,7 +2635,8 @@
       const blob = new Blob(["\ufeff", html], { type: "application/vnd.ms-excel;charset=utf-8" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `${reviewYearValue}年${reviewMonthValue}月数据回顾.xls`;
+      const dayLabel = reviewDayValue === "all" ? "" : `${reviewDayValue}日`;
+      link.download = `${reviewYearValue}年${reviewMonthValue}月${dayLabel}数据回顾.xls`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -2645,12 +2644,13 @@
     }
 
     function exportMembersExcel() {
-      const headers = ["会员ID", "客户姓名", "手机号", "会员等级", "开卡日期", "到期日期", "套餐项目", "剩余次数", "余额", "累计消费", "最近到店日期", "会员状态", "备注", "创建时间", "更新时间"];
+      const headers = ["会员ID", "客户姓名", "手机号", "会员等级", "产品折扣", "开卡日期", "到期日期", "套餐项目", "剩余次数", "余额", "累计消费", "最近到店日期", "会员状态", "备注", "创建时间", "更新时间"];
       const rows = members.map((member) => [
         member.id,
         member.name,
         member.phone,
         member.level,
+        member.productDiscount || "无折扣",
         member.openedAt,
         member.expiresAt,
         member.packageName,
@@ -2689,7 +2689,7 @@
       if (!grid) return;
       const keyword = document.getElementById("memberSearch")?.value.trim().toLowerCase() || "";
       const filtered = members.filter((member) => {
-        const text = `${member.name || ""} ${member.phone || ""} ${member.level || ""} ${member.status || ""}`.toLowerCase();
+        const text = `${member.name || ""} ${member.phone || ""} ${member.level || ""} ${member.productDiscount || ""} ${member.status || ""}`.toLowerCase();
         return text.includes(keyword);
       });
       grid.innerHTML = "";
@@ -2711,6 +2711,7 @@
             <span class="member-badge">${escapeHtml(member.level || "会员")}</span>
           </div>
           <div class="member-meta">状态：${escapeHtml(member.status || "有效")}｜剩余：${escapeHtml(member.remainingTimes || 0)} 次｜余额：${escapeHtml(member.balance || 0)}</div>
+          <div class="member-meta">产品折扣：${escapeHtml(member.productDiscount || "无折扣")}</div>
           <div class="member-meta">套餐：${escapeHtml(member.packageName || "未填写")}</div>
           <div class="member-meta">备注：${escapeHtml(member.notes || "无")}</div>
         `;
@@ -2739,6 +2740,7 @@
       document.getElementById("memberName").value = member.name || "";
       document.getElementById("memberPhone").value = member.phone || "";
       document.getElementById("memberLevel").value = member.level || "普通会员";
+      document.getElementById("memberProductDiscount").value = member.productDiscount || "无折扣";
       document.getElementById("memberStatus").value = member.status || "有效";
       document.getElementById("memberOpenedAt").value = member.openedAt || "";
       document.getElementById("memberExpiresAt").value = member.expiresAt || "";
@@ -2766,6 +2768,7 @@
         name: document.getElementById("memberName").value.trim(),
         phone: document.getElementById("memberPhone").value.trim(),
         level: document.getElementById("memberLevel").value.trim(),
+        productDiscount: document.getElementById("memberProductDiscount").value.trim() || "无折扣",
         openedAt: document.getElementById("memberOpenedAt").value,
         expiresAt: document.getElementById("memberExpiresAt").value,
         packageName: document.getElementById("memberPackage").value.trim(),
@@ -3108,6 +3111,7 @@
         name: row.name || "",
         phone: row.phone || "",
         level: row.level || "普通会员",
+        productDiscount: row.product_discount || "无折扣",
         openedAt: row.opened_at || "",
         expiresAt: row.expires_at || "",
         packageName: row.package_name || "",
@@ -3213,6 +3217,7 @@
         name: member.name,
         phone: member.phone,
         level: member.level || "普通会员",
+        product_discount: member.productDiscount || "无折扣",
         opened_at: member.openedAt || null,
         expires_at: member.expiresAt || null,
         package_name: member.packageName || null,
@@ -3500,6 +3505,12 @@
     });
     document.getElementById("reviewMonth").addEventListener("change", (event) => {
       reviewMonthValue = Number(event.target.value);
+      reviewDayValue = "all";
+      document.getElementById("reviewDay").value = "all";
+      renderMonthlyReview();
+    });
+    document.getElementById("reviewDay").addEventListener("change", (event) => {
+      reviewDayValue = event.target.value || "all";
       renderMonthlyReview();
     });
     document.getElementById("exportReviewBtn").addEventListener("click", exportMonthlyReviewExcel);
