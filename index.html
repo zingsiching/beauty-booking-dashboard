@@ -1459,7 +1459,7 @@
           </div>
           <div class="field">
             <label for="memberPhone">手机号</label>
-            <input id="memberPhone" autocomplete="off" placeholder="建议必填">
+            <input id="memberPhone" autocomplete="off" placeholder="可选">
           </div>
           <div class="field">
             <label for="memberCode">会员编号</label>
@@ -2921,11 +2921,9 @@
         alert("请填写会员姓名。");
         return;
       }
-      if (!member.phone) {
-        alert("请填写手机号，用于预约时识别会员。");
-        return;
-      }
-      const duplicate = members.find((item) => item.id !== member.id && normalizePhone(item.phone) === normalizePhone(member.phone));
+      const duplicate = member.phone
+        ? members.find((item) => item.id !== member.id && normalizePhone(item.phone) === normalizePhone(member.phone))
+        : null;
       if (duplicate) {
         alert("该手机号已存在于会员资料中。");
         return;
