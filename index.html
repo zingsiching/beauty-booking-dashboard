@@ -1458,6 +1458,10 @@
             <input id="memberLevel" autocomplete="off" placeholder="普通会员 / VIP">
           </div>
           <div class="field">
+            <label for="memberStylistName">美容师</label>
+            <input id="memberStylistName" autocomplete="off" placeholder="例如：英姐 / 丽娟">
+          </div>
+          <div class="field">
             <label for="memberProductDiscount">产品折扣</label>
             <input id="memberProductDiscount" autocomplete="off" placeholder="例如：8折 / 产品9折 / 无折扣">
           </div>
@@ -1826,7 +1830,11 @@
     function loadMembers() {
       try {
         return (JSON.parse(localStorage.getItem(membersStorageKey)) || [])
-          .map((member) => ({ ...member, productDiscount: member.productDiscount || "无折扣" }));
+          .map((member) => ({
+            ...member,
+            stylistName: member.stylistName || "",
+            productDiscount: member.productDiscount || "无折扣"
+          }));
       } catch (error) {
         return [];
       }
@@ -2644,12 +2652,13 @@
     }
 
     function exportMembersExcel() {
-      const headers = ["会员ID", "客户姓名", "手机号", "会员等级", "产品折扣", "开卡日期", "到期日期", "套餐项目", "剩余次数", "余额", "累计消费", "最近到店日期", "会员状态", "备注", "创建时间", "更新时间"];
+      const headers = ["会员ID", "客户姓名", "手机号", "会员等级", "美容师", "产品折扣", "开卡日期", "到期日期", "套餐项目", "剩余次数", "余额", "累计消费", "最近到店日期", "会员状态", "备注", "创建时间", "更新时间"];
       const rows = members.map((member) => [
         member.id,
         member.name,
         member.phone,
         member.level,
+        member.stylistName,
         member.productDiscount || "无折扣",
         member.openedAt,
         member.expiresAt,
@@ -2689,7 +2698,7 @@
       if (!grid) return;
       const keyword = document.getElementById("memberSearch")?.value.trim().toLowerCase() || "";
       const filtered = members.filter((member) => {
-        const text = `${member.name || ""} ${member.phone || ""} ${member.level || ""} ${member.productDiscount || ""} ${member.status || ""}`.toLowerCase();
+        const text = `${member.name || ""} ${member.phone || ""} ${member.level || ""} ${member.stylistName || ""} ${member.productDiscount || ""} ${member.status || ""}`.toLowerCase();
         return text.includes(keyword);
       });
       grid.innerHTML = "";
@@ -2711,6 +2720,7 @@
             <span class="member-badge">${escapeHtml(member.level || "会员")}</span>
           </div>
           <div class="member-meta">状态：${escapeHtml(member.status || "有效")}｜剩余：${escapeHtml(member.remainingTimes || 0)} 次｜余额：${escapeHtml(member.balance || 0)}</div>
+          <div class="member-meta">美容师：${escapeHtml(member.stylistName || "未填写")}</div>
           <div class="member-meta">产品折扣：${escapeHtml(member.productDiscount || "无折扣")}</div>
           <div class="member-meta">套餐：${escapeHtml(member.packageName || "未填写")}</div>
           <div class="member-meta">备注：${escapeHtml(member.notes || "无")}</div>
@@ -2740,6 +2750,7 @@
       document.getElementById("memberName").value = member.name || "";
       document.getElementById("memberPhone").value = member.phone || "";
       document.getElementById("memberLevel").value = member.level || "普通会员";
+      document.getElementById("memberStylistName").value = member.stylistName || "";
       document.getElementById("memberProductDiscount").value = member.productDiscount || "无折扣";
       document.getElementById("memberStatus").value = member.status || "有效";
       document.getElementById("memberOpenedAt").value = member.openedAt || "";
@@ -2768,6 +2779,7 @@
         name: document.getElementById("memberName").value.trim(),
         phone: document.getElementById("memberPhone").value.trim(),
         level: document.getElementById("memberLevel").value.trim(),
+        stylistName: document.getElementById("memberStylistName").value.trim(),
         productDiscount: document.getElementById("memberProductDiscount").value.trim() || "无折扣",
         openedAt: document.getElementById("memberOpenedAt").value,
         expiresAt: document.getElementById("memberExpiresAt").value,
@@ -3111,6 +3123,7 @@
         name: row.name || "",
         phone: row.phone || "",
         level: row.level || "普通会员",
+        stylistName: row.stylist_name || "",
         productDiscount: row.product_discount || "无折扣",
         openedAt: row.opened_at || "",
         expiresAt: row.expires_at || "",
@@ -3217,6 +3230,7 @@
         name: member.name,
         phone: member.phone,
         level: member.level || "普通会员",
+        stylist_name: member.stylistName || null,
         product_discount: member.productDiscount || "无折扣",
         opened_at: member.openedAt || null,
         expires_at: member.expiresAt || null,
