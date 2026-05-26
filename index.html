@@ -174,6 +174,10 @@
       line-height: 1.7;
     }
 
+    #usageNoteText {
+      white-space: pre-line;
+    }
+
     .config-list {
       margin: 8px 0 0;
       padding-left: 18px;
@@ -1151,7 +1155,7 @@
         </div>
 
         <div class="section-title">使用说明</div>
-        <div class="side-card slim">
+        <div class="side-card slim" id="usageNoteText">
           先看预约数据看板，再进入当日预约管理处理排班；输入手机号可自动识别会员。
         </div>
       </div>
@@ -1573,6 +1577,11 @@
             <textarea class="staff-editor" id="settingInstruments"></textarea>
             <div class="mini-help">每行一个仪器。例：仪器1</div>
           </div>
+          <div class="field full">
+            <label for="settingUsageNote">左侧使用说明</label>
+            <textarea class="staff-editor" id="settingUsageNote"></textarea>
+            <div class="mini-help">显示在左侧栏“使用说明”位置，可按客户日常流程自行修改。</div>
+          </div>
           <div class="field">
             <label for="storageMode">数据储存方式</label>
             <select id="storageMode">
@@ -1620,6 +1629,7 @@
       supabaseUrl: "https://fakgvpwaqmngxzpfgebp.supabase.co",
       supabaseKey: "sb_publishable_vo_QF5z5TLcTxd8gLv5Exg_UUGRvJBt",
       configVersion: 5,
+      usageNote: "先看预约数据看板，再进入当日预约管理处理排班；输入手机号可自动识别会员。",
       apiUrl: "",
       staffList: [
         { name: "小宝", role: "顾问" },
@@ -1885,6 +1895,7 @@
       document.getElementById("ruleMonth").textContent = monthLabel();
       document.getElementById("ruleHours").textContent = `${minutesToTime(openMinutes)} - ${minutesToTime(closeMinutes)}`;
       document.getElementById("storageModeLabel").textContent = config.storageMode === "supabase" ? "Supabase 云端" : (config.storageMode === "googleSheets" ? "Google Sheets 云端" : "浏览器本地（MVP）");
+      document.getElementById("usageNoteText").textContent = config.usageNote || DEFAULT_CONFIG.usageNote;
       document.documentElement.style.setProperty("--staff-count", staffList.length);
       document.documentElement.style.setProperty("--slot-count", slotTimes().length);
     }
@@ -2896,6 +2907,7 @@
       document.getElementById("settingRooms").value = roomOptions.map((room) => room.name).join("\n");
       document.getElementById("settingStaff").value = staffList.map((staff) => `${staff.name},${staff.role}`).join("\n");
       document.getElementById("settingInstruments").value = instrumentOptions.map((instrument) => instrument.name).join("\n");
+      document.getElementById("settingUsageNote").value = config.usageNote || DEFAULT_CONFIG.usageNote;
       document.getElementById("storageMode").value = config.storageMode || "local";
       document.getElementById("supabaseUrl").value = config.supabaseUrl || "";
       document.getElementById("supabaseKey").value = config.supabaseKey || "";
@@ -2997,6 +3009,7 @@
         supabaseUrl: document.getElementById("supabaseUrl").value.trim(),
         supabaseKey: document.getElementById("supabaseKey").value.trim(),
         apiUrl: document.getElementById("apiUrl").value.trim(),
+        usageNote: document.getElementById("settingUsageNote").value.trim() || DEFAULT_CONFIG.usageNote,
         staffList: parseStaffList(document.getElementById("settingStaff").value)
       };
       const nextServices = parseServices(document.getElementById("settingServices").value);
@@ -3178,7 +3191,8 @@
           month: Number(nextConfig.month),
           openHour: Number(nextConfig.openHour),
           closeHour: Number(nextConfig.closeHour),
-          slotMinutes: Number(nextConfig.slotMinutes || 30)
+          slotMinutes: Number(nextConfig.slotMinutes || 30),
+          usageNote: nextConfig.usageNote || DEFAULT_CONFIG.usageNote
         },
         services: services.map((service, index) => ({
           label: service.label,
