@@ -1405,10 +1405,14 @@
             <input id="customer" autocomplete="off" placeholder="例如：王女士">
           </div>
           <div class="field">
+            <label for="appointmentMemberCode">会员编号</label>
+            <input id="appointmentMemberCode" autocomplete="off" placeholder="可选，输入后自动识别会员">
+          </div>
+          <div class="field">
             <label for="phone">手机号</label>
             <input id="phone" autocomplete="off" placeholder="可选">
           </div>
-          <div class="member-hint" id="memberHint">输入会员手机号后，系统会自动识别会员资料。</div>
+          <div class="member-hint" id="memberHint">输入会员编号、客户姓名或手机号后，系统会自动识别会员资料。</div>
           <div class="field">
             <label for="service">服务项目</label>
             <select id="service"></select>
@@ -1831,13 +1835,14 @@
 
     function loadRecords() {
       try {
-        return JSON.parse(localStorage.getItem(storageKey)) || [];
+        return dedupeRecords(JSON.parse(localStorage.getItem(storageKey)) || []);
       } catch (error) {
         return [];
       }
     }
 
     function saveRecords() {
+      records = dedupeRecords(records);
       localStorage.setItem(storageKey, JSON.stringify(records));
     }
 
@@ -1863,6 +1868,50 @@
       return String(value || "").replace(/\D/g, "");
     }
 
+    function normalizeText(value) {
+      return String(value || "").trim().toLowerCase();
+    }
+
+    function recordDuplicateKey(record) {
+      return [
+        record.type || "appointment",
+        record.status || "",
+        record.date || "",
+        record.startTime || "",
+        Number(record.duration || 0),
+        normalizeText(record.staff),
+        normalizeText(record.customer),
+        normalizePhone(record.phone),
+        normalizeText(record.service),
+        normalizeText(record.room),
+        normalizeText(record.instrument)
+      ].join("|");
+    }
+
+    function newestRecord(a, b) {
+      const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime() || 0;
+      const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime() || 0;
+      return bTime >= aTime ? b : a;
+    }
+
+    function dedupeRecords(list) {
+      const byId = new Map();
+      (Array.isArray(list) ? list : []).forEach((record) => {
+        if (!record) return;
+        if (record.id) {
+          byId.set(record.id, byId.has(record.id) ? newestRecord(byId.get(record.id), record) : record);
+          return;
+        }
+        byId.set(newId("recordless"), record);
+      });
+      const byContent = new Map();
+      [...byId.values()].forEach((record) => {
+        const key = recordDuplicateKey(record);
+        byContent.set(key, byContent.has(key) ? newestRecord(byContent.get(key), record) : record);
+      });
+      return [...byContent.values()].sort((a, b) => `${a.date || ""} ${a.startTime || ""}`.localeCompare(`${b.date || ""} ${b.startTime || ""}`));
+    }
+
     function findMemberByPhone(phone) {
       const normalized = normalizePhone(phone);
       if (!normalized) return null;
@@ -1871,6 +1920,23 @@
 
     function findMemberById(id) {
       return members.find((member) => member.id === id) || null;
+    }
+
+    function findMemberByCode(code) {
+      const normalized = normalizeText(code);
+      if (!normalized) return null;
+      return members.find((member) => normalizeText(member.memberCode) === normalized) || null;
+    }
+
+    function findMemberByName(name) {
+      const normalized = normalizeText(name);
+      if (!normalized) return null;
+      const matches = members.filter((member) => normalizeText(member.name) === normalized);
+      return matches.length === 1 ? matches[0] : null;
+    }
+
+    function resolveMemberForAppointment({ memberId, memberCode, customer, phone }) {
+      return findMemberByCode(memberCode) || findMemberByName(customer) || findMemberByPhone(phone) || findMemberById(memberId);
     }
 
     function getServiceMeta(label) {
@@ -1976,7 +2042,7 @@
           col.appendChild(hit);
         });
 
-        records
+        dedupeRecords(records)
           .filter((record) => record.date === dateValue(selectedDay) && record.staff === staff.name)
           .forEach((record) => col.appendChild(createRecordBlock(record)));
 
@@ -2005,7 +2071,7 @@
         openModal(record);
       });
 
-      const member = record.memberId ? findMemberById(record.memberId) : findMemberByPhone(record.phone);
+      const member = resolveMemberForAppointment(record);
       const memberText = member ? `（${member.level || "会员"}）` : "";
       const discountText = member ? (member.productDiscount || "无折扣") : "无折扣";
       const title = record.type === "blocked" ? (record.notes || "占用") : `${record.customer || "未填写客户"}${memberText}`;
@@ -2031,7 +2097,7 @@
     }
 
     function renderSummary() {
-      const dayRecords = records.filter((record) => record.date === dateValue(selectedDay));
+      const dayRecords = dedupeRecords(records).filter((record) => record.date === dateValue(selectedDay));
       const active = dayRecords.filter((record) => record.type !== "blocked" && record.status !== "cancelled");
       const pending = dayRecords.filter((record) => record.status === "pending");
       const blocked = dayRecords.filter((record) => record.type === "blocked");
@@ -2106,7 +2172,7 @@
 
     function appointmentRecordsFor(yearValue, monthValue) {
       const prefix = `${yearValue}-${pad(monthValue)}-`;
-      return records.filter((record) => (
+      return dedupeRecords(records).filter((record) => (
         record.type !== "blocked" &&
         record.status !== "cancelled" &&
         String(record.date || "").startsWith(prefix)
@@ -2297,6 +2363,8 @@
       document.getElementById("staff").value = data.staff || staffList[0].name;
       document.getElementById("customer").value = data.customer || "";
       document.getElementById("phone").value = data.phone || "";
+      const member = resolveMemberForAppointment(data);
+      document.getElementById("appointmentMemberCode").value = data.memberCode || member?.memberCode || "";
       document.getElementById("service").value = data.service || serviceOptions[0].label;
       document.getElementById("room").value = data.room || "";
       document.getElementById("instrument").value = data.instrument || "";
@@ -2317,6 +2385,12 @@
 
     function formDataToRecord() {
       const id = document.getElementById("recordId").value || newId("rec");
+      const member = resolveMemberForAppointment({
+        memberId: document.getElementById("memberId").value,
+        memberCode: document.getElementById("appointmentMemberCode").value,
+        customer: document.getElementById("customer").value,
+        phone: document.getElementById("phone").value
+      });
       return {
         id,
         type: document.getElementById("recordType").value,
@@ -2325,7 +2399,7 @@
         startTime: document.getElementById("startTime").value,
         duration: Number(document.getElementById("duration").value),
         staff: document.getElementById("staff").value,
-        memberId: document.getElementById("memberId").value,
+        memberId: member?.id || document.getElementById("memberId").value,
         customer: document.getElementById("customer").value.trim(),
         phone: document.getElementById("phone").value.trim(),
         service: document.getElementById("service").value,
@@ -2372,21 +2446,35 @@
 
     function updateMemberHint() {
       const phone = document.getElementById("phone").value;
+      const memberCode = document.getElementById("appointmentMemberCode").value;
+      const customer = document.getElementById("customer").value;
       const memberHint = document.getElementById("memberHint");
-      const member = findMemberByPhone(phone);
+      const member = resolveMemberForAppointment({
+        memberId: document.getElementById("memberId").value,
+        memberCode,
+        customer,
+        phone
+      });
       if (member) {
         document.getElementById("memberId").value = member.id;
+        if (!document.getElementById("appointmentMemberCode").value.trim()) {
+          document.getElementById("appointmentMemberCode").value = member.memberCode || "";
+        }
         if (!document.getElementById("customer").value.trim()) {
           document.getElementById("customer").value = member.name || "";
         }
+        if (!document.getElementById("phone").value.trim()) {
+          document.getElementById("phone").value = member.phone || "";
+        }
         memberHint.classList.add("ok");
-        memberHint.innerHTML = `<strong>已识别会员：</strong>${escapeHtml(member.name || "")}｜${escapeHtml(member.level || "会员")}｜产品折扣：${escapeHtml(member.productDiscount || "无折扣")}｜剩余 ${escapeHtml(member.remainingTimes || 0)} 次｜余额 ${escapeHtml(member.balance || 0)}｜${escapeHtml(member.notes || "无备注")}`;
+        memberHint.innerHTML = `<strong>已识别会员：</strong>${escapeHtml(member.name || "")}｜编号 ${escapeHtml(member.memberCode || "未填写")}｜${escapeHtml(member.level || "会员")}｜产品折扣：${escapeHtml(member.productDiscount || "无折扣")}｜剩余 ${escapeHtml(member.remainingTimes || 0)} 次｜余额 ${escapeHtml(member.balance || 0)}｜${escapeHtml(member.notes || "无备注")}`;
         return;
       }
 
       document.getElementById("memberId").value = "";
       memberHint.classList.remove("ok");
-      memberHint.textContent = phone ? "未匹配到会员。产品折扣：无折扣。可在会员系统管理中新增该客户。" : "输入会员手机号后，系统会自动识别会员资料；未识别时产品折扣为无折扣。";
+      const hasLookupValue = memberCode.trim() || customer.trim() || phone.trim();
+      memberHint.textContent = hasLookupValue ? "未匹配到会员。产品折扣：无折扣。可在会员系统管理中新增该客户。" : "输入会员编号、客户姓名或手机号后，系统会自动识别会员资料；未识别时产品折扣为无折扣。";
     }
 
     async function saveForm(event) {
@@ -2409,6 +2497,7 @@
         await pushCloudData();
       }
       records.sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`));
+      records = dedupeRecords(records);
       saveRecords();
       closeModal();
       render();
@@ -2417,6 +2506,7 @@
           setSyncStatus("正在保存预约到 Supabase...");
           const savedRecord = await saveSupabaseAppointment(record);
           records = records.map((item) => item.id === record.id ? savedRecord : item);
+          records = dedupeRecords(records);
           saveRecords();
           setSyncStatus("预约已保存到 Supabase。", "ok");
           render();
@@ -2448,7 +2538,7 @@
     function exportExcel() {
       const headers = ["预约日期", "开始时间", "结束时间", "客户姓名", "手机号", "是否会员", "会员等级", "产品折扣", "服务项目", "美容师", "房间", "仪器", "类型", "预约状态", "备注", "登记人", "创建时间", "更新时间"];
       const rows = appointmentRecordsFor(year, month).map((record) => {
-        const member = findMemberById(record.memberId) || findMemberByPhone(record.phone);
+        const member = resolveMemberForAppointment(record);
         return [
           record.date,
           record.startTime,
@@ -3136,7 +3226,7 @@
           applyConfig({ ...config, ...result.config, apiUrl: config.apiUrl, storageMode: config.storageMode });
           saveConfig();
         }
-        records = Array.isArray(result.appointments) ? result.appointments : [];
+        records = dedupeRecords(Array.isArray(result.appointments) ? result.appointments : []);
         saveRecords();
         members = Array.isArray(result.members) ? result.members : [];
         saveMembers();
@@ -3280,7 +3370,7 @@
     }
 
     function supabaseAppointmentPayload(record) {
-      const member = findMemberById(record.memberId) || findMemberByPhone(record.phone);
+      const member = resolveMemberForAppointment(record);
       const service = serviceOptions.find((item) => item.label === record.service);
       const staff = staffList.find((item) => item.name === record.staff);
       const room = roomOptions.find((item) => item.name === record.room);
@@ -3364,7 +3454,7 @@
         applyDashboardContent(contentValue);
       }
       members = (membersResult.data || []).map(mapSupabaseMember);
-      records = (appointmentsResult.data || []).map(mapSupabaseAppointment);
+      records = dedupeRecords((appointmentsResult.data || []).map(mapSupabaseAppointment));
       config.staffList = staffList;
       saveConfig();
       saveMembers();
@@ -3529,6 +3619,8 @@
     document.getElementById("cancelBtn").addEventListener("click", closeModal);
     deleteBtn.addEventListener("click", deleteCurrentRecord);
     form.addEventListener("submit", saveForm);
+    document.getElementById("appointmentMemberCode").addEventListener("input", updateMemberHint);
+    document.getElementById("customer").addEventListener("input", updateMemberHint);
     document.getElementById("phone").addEventListener("input", updateMemberHint);
     document.getElementById("newMemberBtn").addEventListener("click", () => openMemberModal());
     document.getElementById("memberCloseBtn").addEventListener("click", closeMemberModal);
