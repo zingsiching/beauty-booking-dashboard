@@ -1458,6 +1458,10 @@
             <input id="memberPhone" autocomplete="off" placeholder="建议必填">
           </div>
           <div class="field">
+            <label for="memberCode">会员编号</label>
+            <input id="memberCode" autocomplete="off" placeholder="例如：VIP-001">
+          </div>
+          <div class="field">
             <label for="memberLevel">会员等级</label>
             <input id="memberLevel" autocomplete="off" placeholder="普通会员 / VIP">
           </div>
@@ -1842,6 +1846,7 @@
         return (JSON.parse(localStorage.getItem(membersStorageKey)) || [])
           .map((member) => ({
             ...member,
+            memberCode: member.memberCode || "",
             stylistName: member.stylistName || "",
             productDiscount: member.productDiscount || "无折扣"
           }));
@@ -2673,9 +2678,10 @@
     }
 
     function exportMembersExcel() {
-      const headers = ["会员ID", "客户姓名", "手机号", "会员等级", "美容师", "产品折扣", "开卡日期", "到期日期", "套餐项目", "剩余次数", "余额", "累计消费", "最近到店日期", "会员状态", "备注", "创建时间", "更新时间"];
+      const headers = ["会员ID", "会员编号", "客户姓名", "手机号", "会员等级", "美容师", "产品折扣", "开卡日期", "到期日期", "套餐项目", "剩余次数", "余额", "累计消费", "最近到店日期", "会员状态", "备注", "创建时间", "更新时间"];
       const rows = members.map((member) => [
         member.id,
+        member.memberCode,
         member.name,
         member.phone,
         member.level,
@@ -2719,7 +2725,7 @@
       if (!grid) return;
       const keyword = document.getElementById("memberSearch")?.value.trim().toLowerCase() || "";
       const filtered = members.filter((member) => {
-        const text = `${member.name || ""} ${member.phone || ""} ${member.level || ""} ${member.stylistName || ""} ${member.productDiscount || ""} ${member.status || ""}`.toLowerCase();
+        const text = `${member.memberCode || ""} ${member.name || ""} ${member.phone || ""} ${member.level || ""} ${member.stylistName || ""} ${member.productDiscount || ""} ${member.status || ""}`.toLowerCase();
         return text.includes(keyword);
       });
       grid.innerHTML = "";
@@ -2736,7 +2742,7 @@
           <div class="member-card-head">
             <div>
               <div class="member-name">${escapeHtml(member.name || "未命名会员")}</div>
-              <div class="member-meta">${escapeHtml(member.phone || "未填写手机号")}</div>
+              <div class="member-meta">${escapeHtml(member.memberCode || "未填写编号")}｜${escapeHtml(member.phone || "未填写手机号")}</div>
             </div>
             <span class="member-badge">${escapeHtml(member.level || "会员")}</span>
           </div>
@@ -2770,6 +2776,7 @@
       document.getElementById("memberRecordId").value = member.id || "";
       document.getElementById("memberName").value = member.name || "";
       document.getElementById("memberPhone").value = member.phone || "";
+      document.getElementById("memberCode").value = member.memberCode || "";
       document.getElementById("memberLevel").value = member.level || "普通会员";
       document.getElementById("memberStylistName").value = member.stylistName || "";
       document.getElementById("memberProductDiscount").value = member.productDiscount || "无折扣";
@@ -2799,6 +2806,7 @@
         id,
         name: document.getElementById("memberName").value.trim(),
         phone: document.getElementById("memberPhone").value.trim(),
+        memberCode: document.getElementById("memberCode").value.trim(),
         level: document.getElementById("memberLevel").value.trim(),
         stylistName: document.getElementById("memberStylistName").value.trim(),
         productDiscount: document.getElementById("memberProductDiscount").value.trim() || "无折扣",
@@ -3143,6 +3151,7 @@
     function mapSupabaseMember(row) {
       return {
         id: row.id,
+        memberCode: row.member_code || "",
         name: row.name || "",
         phone: row.phone || "",
         level: row.level || "普通会员",
@@ -3251,6 +3260,7 @@
     function supabaseMemberPayload(member) {
       return {
         id: isUuid(member.id) ? member.id : undefined,
+        member_code: member.memberCode || null,
         name: member.name,
         phone: member.phone,
         level: member.level || "普通会员",
