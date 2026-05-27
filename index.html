@@ -1695,6 +1695,7 @@
     let storageKey = getRecordsStorageKey();
     let records = loadRecords();
     let members = loadMembers();
+    let supabaseMemberIds = new Set();
     let cloudBootstrapped = false;
     const dashboardContentId = "main";
 
@@ -2399,7 +2400,7 @@
         startTime: document.getElementById("startTime").value,
         duration: Number(document.getElementById("duration").value),
         staff: document.getElementById("staff").value,
-        memberId: member?.id || document.getElementById("memberId").value,
+        memberId: member?.id || "",
         customer: document.getElementById("customer").value.trim(),
         phone: document.getElementById("phone").value.trim(),
         service: document.getElementById("service").value,
@@ -3369,6 +3370,9 @@
 
     function supabaseAppointmentPayload(record) {
       const member = resolveMemberForAppointment(record);
+      const memberId = member?.id && isUuid(member.id) && (config.storageMode !== "supabase" || supabaseMemberIds.has(member.id))
+        ? member.id
+        : null;
       const service = serviceOptions.find((item) => item.label === record.service);
       const staff = staffList.find((item) => item.name === record.staff);
       const room = roomOptions.find((item) => item.name === record.room);
@@ -3382,7 +3386,7 @@
         duration: Number(record.duration || 90),
         customer: record.customer || null,
         phone: record.phone || null,
-        member_id: member?.id && isUuid(member.id) ? member.id : null,
+        member_id: memberId,
         service_id: service?.id && isUuid(service.id) ? service.id : null,
         service_name: record.service || null,
         staff_id: staff?.id && isUuid(staff.id) ? staff.id : null,
@@ -3452,6 +3456,7 @@
         applyDashboardContent(contentValue);
       }
       members = (membersResult.data || []).map(mapSupabaseMember);
+      supabaseMemberIds = new Set(members.map((member) => member.id).filter(Boolean));
       records = dedupeRecords((appointmentsResult.data || []).map(mapSupabaseAppointment));
       config.staffList = staffList;
       saveConfig();
@@ -3528,6 +3533,7 @@
       const { data, error } = await query;
       if (error) throw error;
       const mapped = mapSupabaseMember(data);
+      if (mapped.id) supabaseMemberIds.add(mapped.id);
       return mapped;
     }
 
@@ -3535,6 +3541,7 @@
       if (!isUuid(id)) return;
       const { error } = await getSupabaseClient().from("members").delete().eq("id", id);
       if (error) throw error;
+      supabaseMemberIds.delete(id);
     }
 
     async function readCloudData() {
