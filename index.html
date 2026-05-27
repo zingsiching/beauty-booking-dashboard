@@ -2072,7 +2072,7 @@
       });
 
       const member = resolveMemberForAppointment(record);
-      const memberText = member ? `（${member.level || "会员"}）` : "";
+      const memberText = member?.memberCode ? `（${member.memberCode}）` : "";
       const discountText = member ? (member.productDiscount || "无折扣") : "无折扣";
       const title = record.type === "blocked" ? (record.notes || "占用") : `${record.customer || "未填写客户"}${memberText}`;
       const service = record.type === "blocked" ? "不可预约" : (record.service || "未填写项目");
