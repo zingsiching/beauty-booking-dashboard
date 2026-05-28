@@ -1856,8 +1856,8 @@
             <select id="duration">
               <option value="30">30分钟</option>
               <option value="60">60分钟</option>
-              <option value="90" selected>90分钟</option>
-              <option value="120">120分钟</option>
+              <option value="90">90分钟</option>
+              <option value="120" selected>120分钟</option>
               <option value="150">150分钟</option>
               <option value="180">180分钟</option>
               <option value="240">240分钟</option>
@@ -2099,11 +2099,11 @@
       openHour: 10,
       closeHour: 22,
       slotMinutes: 30,
-      defaultDuration: 90,
+      defaultDuration: 120,
       storageMode: "supabase",
       supabaseUrl: "https://fakgvpwaqmngxzpfgebp.supabase.co",
       supabaseKey: "sb_publishable_vo_QF5z5TLcTxd8gLv5Exg_UUGRvJBt",
-      configVersion: 5,
+      configVersion: 6,
       usageNote: "先看预约数据看板，再进入当日预约管理处理排班；输入手机号可自动识别会员。",
       apiUrl: "",
       staffList: [
@@ -2205,6 +2205,9 @@
           merged.storageMode = "supabase";
           merged.supabaseUrl = DEFAULT_CONFIG.supabaseUrl;
           merged.supabaseKey = DEFAULT_CONFIG.supabaseKey;
+          if (!saved?.configVersion || saved.configVersion < 6) {
+            merged.defaultDuration = DEFAULT_CONFIG.defaultDuration;
+          }
           merged.configVersion = DEFAULT_CONFIG.configVersion;
           localStorage.setItem(configStorageKey, JSON.stringify(merged));
         }
@@ -2513,7 +2516,7 @@
             date: dateValue(selectedDay),
             startTime: time,
             staff: staff.name,
-            duration: 90,
+            duration: config.defaultDuration,
             status: "confirmed",
             type: "appointment"
           }));
@@ -2555,6 +2558,7 @@
       const title = record.type === "blocked" ? (record.notes || "占用") : `${record.customer || "未填写客户"}${memberText}`;
       const service = record.type === "blocked" ? "不可预约" : (record.service || "未填写项目");
       const room = record.room || "未分配";
+      const notes = String(record.notes || "").trim();
       button.innerHTML = `
         <div class="appt-name">${escapeHtml(title)}</div>
         <div class="appt-detail">${record.startTime} - ${endTime(record)}</div>
@@ -2562,6 +2566,7 @@
         <div class="appt-detail">房间：${escapeHtml(room)}</div>
         <div class="appt-detail">项目：${escapeHtml(service)}</div>
         <div class="appt-detail">折扣：${escapeHtml(discountText)}</div>
+        ${notes ? `<div class="appt-detail">备注：${escapeHtml(notes)}</div>` : ""}
       `;
       return button;
     }
