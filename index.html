@@ -1137,10 +1137,10 @@
       <div class="module-panel" id="appointmentSidebar">
         <div class="section-title">预约页面</div>
         <div class="side-subnav" aria-label="预约页面">
-          <button class="side-subnav-btn active" type="button" data-appointment-page="dashboard">预约数据看板</button>
-          <button class="side-subnav-btn" type="button" data-appointment-page="daily">当日预约管理</button>
-          <button class="side-subnav-btn" type="button" data-appointment-page="stylists">美容师客户管理</button>
-          <button class="side-subnav-btn" type="button" data-appointment-page="monthlyReview">月度数据回顾</button>
+          <button class="side-subnav-btn active" type="button" data-appointment-page="daily">当日预约管理</button>
+          <button class="side-subnav-btn" type="button" data-appointment-page="monthlyReview">月度预约数据看板</button>
+          <button class="side-subnav-btn" type="button" data-appointment-page="stylists">美容师客户管理看板</button>
+          <button class="side-subnav-btn" type="button" data-appointment-page="retention">美容师复购数据看板</button>
         </div>
 
         <div class="section-title">当前规则</div>
@@ -1179,7 +1179,7 @@
       <section class="page-module" id="appointmentsModule">
       <header class="toolbar">
         <div>
-          <h1 class="page-title" id="pageTitle">预约数据看板</h1>
+          <h1 class="page-title" id="pageTitle">当日预约管理</h1>
           <div class="page-meta" id="pageMeta"></div>
           <div class="summary-row" id="summaryRow"></div>
         </div>
@@ -1192,7 +1192,7 @@
         </div>
       </header>
 
-      <section class="appointment-page" id="dashboardPage">
+      <section class="appointment-page hidden" id="dashboardPage">
         <div class="dashboard">
           <div class="dashboard-module">
             <div class="module-title">预约数据</div>
@@ -1235,7 +1235,7 @@
         </div>
       </section>
 
-      <section class="appointment-page hidden" id="schedulePage">
+      <section class="appointment-page" id="schedulePage">
         <div class="date-navigator">
           <div class="date-stepper">
             <button type="button" id="prevDayBtn" aria-label="前一天">‹</button>
@@ -1266,6 +1266,8 @@
                 <tr>
                   <th>美容师名称</th>
                   <th>接待客户名称</th>
+                  <th>客户类型</th>
+                  <th>会员编号</th>
                   <th>手机号</th>
                   <th>日期</th>
                   <th>项目</th>
@@ -1297,6 +1299,22 @@
                   <div class="metric-label">预约客户数</div>
                   <div class="metric-number" id="reviewCustomerCount">0</div>
                 </div>
+                <div class="metric-card">
+                  <div class="metric-label">新客数量</div>
+                  <div class="metric-number" id="reviewNewCustomerCount">0</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">存量客户</div>
+                  <div class="metric-number" id="reviewExistingCustomerCount">0</div>
+                </div>
+              </div>
+              <div class="chart-card">
+                <div class="module-title">预约趋势折线图</div>
+                <div class="chart-legend">
+                  <span><span class="legend-dot" style="background:#007aff"></span>本月</span>
+                  <span><span class="legend-dot" style="background:#a1a1aa"></span>上月</span>
+                </div>
+                <div id="reviewTrendChart"></div>
               </div>
               <div class="chart-card">
                 <div class="module-title">项目排行</div>
@@ -1306,6 +1324,10 @@
             <div class="dashboard-module">
               <div class="module-title">美容师接待排行</div>
               <div class="rank-list" id="reviewStylistRankList"></div>
+              <div class="chart-card">
+                <div class="module-title">客户类型</div>
+                <div class="rank-list" id="reviewCustomerTypeList"></div>
+              </div>
             </div>
           </div>
           <div class="data-card">
@@ -1315,12 +1337,73 @@
                   <th>日期</th>
                   <th>美容师</th>
                   <th>客户</th>
+                  <th>客户类型</th>
                   <th>手机号</th>
                   <th>项目</th>
                   <th>房间</th>
                 </tr>
               </thead>
               <tbody id="reviewDetailBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="appointment-page hidden" id="retentionPage">
+        <div class="customer-layout">
+          <div class="customer-tools">
+            <select id="retentionYear"></select>
+            <select id="retentionMonth"></select>
+            <select id="retentionStylist"></select>
+            <input id="retentionSearch" autocomplete="off" placeholder="搜索客户、会员编号、手机号">
+            <button class="btn" type="button" id="clearRetentionSearchBtn">清空</button>
+            <button class="btn" type="button" id="exportRetentionBtn">导出复购数据</button>
+          </div>
+          <div class="dashboard review-dashboard">
+            <div class="dashboard-module">
+              <div class="module-title">复购概览</div>
+              <div class="metric-grid">
+                <div class="metric-card">
+                  <div class="metric-label">接待客户</div>
+                  <div class="metric-number" id="retentionCustomerCount">0</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">复购客户</div>
+                  <div class="metric-number" id="retentionRepeatCount">0</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">平均到店次数</div>
+                  <div class="metric-number" id="retentionAverageVisits">0</div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-label">高频客户</div>
+                  <div class="metric-number" id="retentionHighValueCount">0</div>
+                </div>
+              </div>
+              <div class="chart-card">
+                <div class="module-title">客户到店次数排行</div>
+                <div class="rank-list" id="retentionCustomerRankList"></div>
+              </div>
+            </div>
+            <div class="dashboard-module">
+              <div class="module-title">美容师复购对比</div>
+              <div class="rank-list" id="retentionStylistRankList"></div>
+            </div>
+          </div>
+          <div class="data-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>美容师</th>
+                  <th>客户姓名</th>
+                  <th>会员编号</th>
+                  <th>手机号</th>
+                  <th>到店次数</th>
+                  <th>项目记录</th>
+                  <th>最近到店</th>
+                </tr>
+              </thead>
+              <tbody id="retentionDetailBody"></tbody>
             </table>
           </div>
         </div>
@@ -1374,6 +1457,13 @@
               <option value="pending">待确认</option>
               <option value="arrived">已到店/进行中</option>
               <option value="cancelled">已取消</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="customerType">客户类型</label>
+            <select id="customerType">
+              <option value="old">老客</option>
+              <option value="new">新客</option>
             </select>
           </div>
           <div class="field">
@@ -1671,10 +1761,12 @@
     let config = loadConfig();
     let staffList = config.staffList;
     let currentModule = "appointments";
-    let currentAppointmentPage = "dashboard";
+    let currentAppointmentPage = "daily";
     let reviewYearValue = config.year;
     let reviewMonthValue = config.month;
     let reviewDayValue = "all";
+    let retentionYearValue = config.year;
+    let retentionMonthValue = config.month;
 
     const statusMap = {
       confirmed: { label: "已确认", className: "confirmed" },
@@ -1877,6 +1969,7 @@
       return [
         record.type || "appointment",
         record.status || "",
+        record.customerType || "old",
         record.date || "",
         record.startTime || "",
         Number(record.duration || 0),
@@ -2081,6 +2174,7 @@
       button.innerHTML = `
         <div class="appt-name">${escapeHtml(title)}</div>
         <div class="appt-detail">${record.startTime} - ${endTime(record)}</div>
+        <div class="appt-detail">类型：${customerTypeLabel(record.customerType)}</div>
         <div class="appt-detail">房间：${escapeHtml(room)}</div>
         <div class="appt-detail">项目：${escapeHtml(service)}</div>
         <div class="appt-detail">折扣：${escapeHtml(discountText)}</div>
@@ -2115,10 +2209,10 @@
 
     function renderTitle() {
       const titles = {
-        dashboard: "预约数据看板",
         daily: "当日预约管理",
-        stylists: "美容师客户管理",
-        monthlyReview: "月度数据回顾"
+        monthlyReview: "月度预约数据看板",
+        stylists: "美容师客户管理看板",
+        retention: "美容师复购数据看板"
       };
       pageTitle.textContent = titles[currentAppointmentPage] || "预约管理";
       pageMeta.textContent = `${monthLabel()} · 营业时间 ${minutesToTime(openMinutes)} - ${minutesToTime(closeMinutes)}`;
@@ -2135,6 +2229,7 @@
       renderMembers();
       renderStylistCustomers();
       renderMonthlyReview();
+      renderRetentionDashboard();
       updateMemberStats();
     }
 
@@ -2147,6 +2242,7 @@
       document.getElementById("schedulePage").classList.toggle("hidden", pageName !== "daily");
       document.getElementById("stylistPage").classList.toggle("hidden", pageName !== "stylists");
       document.getElementById("monthlyReviewPage").classList.toggle("hidden", pageName !== "monthlyReview");
+      document.getElementById("retentionPage").classList.toggle("hidden", pageName !== "retention");
       document.querySelectorAll(".schedule-only").forEach((element) => {
         element.style.display = pageName === "daily" ? "" : "none";
       });
@@ -2157,6 +2253,7 @@
       renderDashboard();
       renderStylistCustomers();
       renderMonthlyReview();
+      renderRetentionDashboard();
     }
 
     function switchModule(moduleName) {
@@ -2222,7 +2319,7 @@
       `).join("");
     }
 
-    function renderRankList(elementId, items, emptyText) {
+    function renderRankList(elementId, items, emptyText, suffix = "单") {
       const list = document.getElementById(elementId);
       if (!list) return;
       if (!items.length) {
@@ -2233,7 +2330,7 @@
         <div class="rank-item">
           <span class="rank-index">${index + 1}</span>
           <span>${escapeHtml(label)}</span>
-          <span>${count}单</span>
+          <span>${count}${suffix}</span>
         </div>
       `).join("");
     }
@@ -2247,6 +2344,15 @@
       return Object.entries(counts).sort((a, b) => b[1] - a[1]);
     }
 
+    function customerTypeLabel(value) {
+      return value === "new" ? "新客" : "老客";
+    }
+
+    function customerIdentity(record) {
+      const member = resolveMemberForAppointment(record);
+      return member?.memberCode || normalizePhone(record.phone) || normalizeText(record.customer);
+    }
+
     function dailyCounts(monthRecords, targetYear, targetMonth) {
       const totalDays = new Date(targetYear, targetMonth, 0).getDate();
       const counts = Array.from({ length: totalDays }, () => 0);
@@ -2257,9 +2363,11 @@
       return counts;
     }
 
-    function renderTrendChart(thisMonthRecords, prevMonthRecords) {
-      const currentCounts = dailyCounts(thisMonthRecords, year, month);
-      const prevDate = new Date(year, month - 2, 1);
+    function renderTrendChart(thisMonthRecords, prevMonthRecords, elementId = "trendChart", targetYear = year, targetMonth = month) {
+      const target = document.getElementById(elementId);
+      if (!target) return;
+      const currentCounts = dailyCounts(thisMonthRecords, targetYear, targetMonth);
+      const prevDate = new Date(targetYear, targetMonth - 2, 1);
       const prevCounts = dailyCounts(prevMonthRecords, prevDate.getFullYear(), prevDate.getMonth() + 1);
       const maxDays = Math.max(currentCounts.length, prevCounts.length);
       const maxValue = Math.max(1, ...currentCounts, ...prevCounts);
@@ -2281,7 +2389,7 @@
         .filter((point) => point.value > 0)
         .map((point) => `<text x="${point.x.toFixed(1)}" y="${(point.y + yOffset).toFixed(1)}" fill="${color}" font-size="12" font-weight="800" text-anchor="middle">${point.value}</text>`)
         .join("");
-      document.getElementById("trendChart").innerHTML = `
+      target.innerHTML = `
         <svg viewBox="0 0 ${width} ${height}" width="100%" height="220" role="img" aria-label="预约趋势折线图">
           <line x1="${padX}" y1="${height - padY}" x2="${width - padX}" y2="${height - padY}" stroke="#d1d1d6" />
           <line x1="${padX}" y1="${padY}" x2="${padX}" y2="${height - padY}" stroke="#d1d1d6" />
@@ -2358,6 +2466,7 @@
       document.getElementById("memberId").value = data.memberId || "";
       document.getElementById("recordType").value = data.type || "appointment";
       document.getElementById("status").value = data.status || "confirmed";
+      document.getElementById("customerType").value = data.customerType || "old";
       document.getElementById("date").value = data.date || dateValue(selectedDay);
       document.getElementById("startTime").value = data.startTime || minutesToTime(openMinutes);
       document.getElementById("duration").value = data.duration || config.defaultDuration;
@@ -2396,6 +2505,7 @@
         id,
         type: document.getElementById("recordType").value,
         status: document.getElementById("status").value,
+        customerType: document.getElementById("customerType").value,
         date: document.getElementById("date").value,
         startTime: document.getElementById("startTime").value,
         duration: Number(document.getElementById("duration").value),
@@ -2537,7 +2647,7 @@
     }
 
     function exportExcel() {
-      const headers = ["预约日期", "开始时间", "结束时间", "客户姓名", "手机号", "是否会员", "会员等级", "产品折扣", "服务项目", "美容师", "房间", "仪器", "类型", "预约状态", "备注", "登记人", "创建时间", "更新时间"];
+      const headers = ["预约日期", "开始时间", "结束时间", "客户姓名", "客户类型", "手机号", "是否会员", "会员等级", "产品折扣", "服务项目", "美容师", "房间", "仪器", "类型", "预约状态", "备注", "登记人", "创建时间", "更新时间"];
       const rows = appointmentRecordsFor(year, month).map((record) => {
         const member = resolveMemberForAppointment(record);
         return [
@@ -2545,6 +2655,7 @@
           record.startTime,
           endTime(record),
           record.customer,
+          customerTypeLabel(record.customerType),
           record.phone,
           member ? "是" : "否",
           member?.level || "",
@@ -2585,7 +2696,7 @@
 
     function stylistCustomerRows() {
       const prefix = `${year}-${pad(month)}-`;
-      return records
+      return dedupeRecords(records)
         .filter((record) => (
           record.type !== "blocked" &&
           record.status !== "cancelled" &&
@@ -2594,13 +2705,18 @@
           String(record.date || "").startsWith(prefix)
         ))
         .sort((a, b) => `${a.staff} ${a.date} ${a.startTime}`.localeCompare(`${b.staff} ${b.date} ${b.startTime}`))
-        .map((record) => ({
-          staff: record.staff,
-          customer: record.customer,
-          phone: record.phone || "",
-          date: record.date,
-          service: record.service || ""
-        }));
+        .map((record) => {
+          const member = resolveMemberForAppointment(record);
+          return {
+            staff: record.staff,
+            customer: record.customer,
+            memberCode: member?.memberCode || "",
+            phone: record.phone || member?.phone || "",
+            date: record.date,
+            service: record.service || "",
+            customerType: record.customerType || "old"
+          };
+        });
     }
 
     function fillStylistFilter() {
@@ -2620,7 +2736,7 @@
       const keyword = (document.getElementById("stylistSearch")?.value || "").trim().toLowerCase();
       return stylistCustomerRows().filter((row) => {
         const matchesStaff = filter === "all" || row.staff === filter;
-        const text = `${row.staff} ${row.customer} ${row.phone} ${row.date} ${row.service}`.toLowerCase();
+        const text = `${row.staff} ${row.customer} ${row.memberCode} ${row.phone} ${row.date} ${row.service} ${customerTypeLabel(row.customerType)}`.toLowerCase();
         return matchesStaff && (!keyword || text.includes(keyword));
       });
     }
@@ -2631,13 +2747,15 @@
       fillStylistFilter();
       const rows = filteredStylistCustomerRows();
       if (!rows.length) {
-        body.innerHTML = `<tr><td colspan="5" class="member-meta">当前月份暂无美容师客户记录</td></tr>`;
+        body.innerHTML = `<tr><td colspan="7" class="member-meta">当前月份暂无美容师客户记录</td></tr>`;
         return;
       }
       body.innerHTML = rows.map((row) => `
         <tr>
           <td>${escapeHtml(row.staff)}</td>
           <td>${escapeHtml(row.customer)}</td>
+          <td>${customerTypeLabel(row.customerType)}</td>
+          <td>${escapeHtml(row.memberCode)}</td>
           <td>${escapeHtml(row.phone)}</td>
           <td>${escapeHtml(row.date)}</td>
           <td>${escapeHtml(row.service)}</td>
@@ -2646,9 +2764,9 @@
     }
 
     function exportStylistCustomersExcel() {
-      const headers = ["美容师名称", "接待客户名称", "手机号", "日期", "项目"];
+      const headers = ["美容师名称", "接待客户名称", "客户类型", "会员编号", "手机号", "日期", "项目"];
       const currentStaff = document.getElementById("stylistFilter")?.value || "all";
-      const rows = filteredStylistCustomerRows().map((row) => [row.staff, row.customer, row.phone, row.date, row.service]);
+      const rows = filteredStylistCustomerRows().map((row) => [row.staff, row.customer, customerTypeLabel(row.customerType), row.memberCode, row.phone, row.date, row.service]);
       if (!rows.length) {
         alert("当前筛选条件下暂无可导出的美容师客户记录。");
         return;
@@ -2719,13 +2837,26 @@
       fillReviewSelectors();
       const rows = reviewRecords();
       const customers = new Set(rows.map((record) => normalizePhone(record.phone) || record.customer).filter(Boolean));
+      const newCustomerRows = rows.filter((record) => record.customerType === "new");
+      const oldCustomerRows = rows.filter((record) => record.customerType !== "new");
       document.getElementById("reviewAppointmentCount").textContent = rows.length;
       document.getElementById("reviewCustomerCount").textContent = customers.size;
+      document.getElementById("reviewNewCustomerCount").textContent = new Set(newCustomerRows.map(customerIdentity).filter(Boolean)).size;
+      document.getElementById("reviewExistingCustomerCount").textContent = new Set(oldCustomerRows.map(customerIdentity).filter(Boolean)).size;
       const emptyLabel = reviewDayValue === "all" ? "该月份暂无预约记录" : "该日期暂无预约记录";
+      const prevReviewDate = new Date(reviewYearValue, reviewMonthValue - 2, 1);
+      renderTrendChart(
+        appointmentRecordsFor(reviewYearValue, reviewMonthValue),
+        appointmentRecordsFor(prevReviewDate.getFullYear(), prevReviewDate.getMonth() + 1),
+        "reviewTrendChart",
+        reviewYearValue,
+        reviewMonthValue
+      );
       renderRankList("reviewServiceRankList", countBy(rows, (record) => record.service || "其他").slice(0, 8), "暂无项目数据");
       renderRankList("reviewStylistRankList", countBy(rows, (record) => record.staff || "未分配").slice(0, 8), "暂无美容师接待数据");
+      renderRankList("reviewCustomerTypeList", countBy(rows, (record) => customerTypeLabel(record.customerType)), "暂无客户类型数据");
       if (!rows.length) {
-        body.innerHTML = `<tr><td colspan="6" class="member-meta">${emptyLabel}</td></tr>`;
+        body.innerHTML = `<tr><td colspan="7" class="member-meta">${emptyLabel}</td></tr>`;
         return;
       }
       body.innerHTML = rows.map((record) => `
@@ -2733,6 +2864,7 @@
           <td>${escapeHtml(record.date)}</td>
           <td>${escapeHtml(record.staff || "未分配")}</td>
           <td>${escapeHtml(record.customer || "")}</td>
+          <td>${customerTypeLabel(record.customerType)}</td>
           <td>${escapeHtml(record.phone || "")}</td>
           <td>${escapeHtml(record.service || "")}</td>
           <td>${escapeHtml(record.room || "")}</td>
@@ -2741,13 +2873,14 @@
     }
 
     function exportMonthlyReviewExcel() {
-      const headers = ["日期", "开始时间", "结束时间", "美容师", "客户", "手机号", "项目", "房间", "状态"];
+      const headers = ["日期", "开始时间", "结束时间", "美容师", "客户", "客户类型", "手机号", "项目", "房间", "状态"];
       const rows = reviewRecords().map((record) => [
         record.date,
         record.startTime,
         endTime(record),
         record.staff,
         record.customer,
+        customerTypeLabel(record.customerType),
         record.phone,
         record.service,
         record.room,
@@ -2762,6 +2895,116 @@
       link.href = URL.createObjectURL(blob);
       const dayLabel = reviewDayValue === "all" ? "" : `${reviewDayValue}日`;
       link.download = `${reviewYearValue}年${reviewMonthValue}月${dayLabel}数据回顾.xls`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function fillRetentionFilters() {
+      const yearSelect = document.getElementById("retentionYear");
+      const monthSelect = document.getElementById("retentionMonth");
+      const stylistSelect = document.getElementById("retentionStylist");
+      if (!yearSelect || !monthSelect || !stylistSelect) return;
+      const selectedYear = Number(yearSelect.value || retentionYearValue || year);
+      const selectedMonth = Number(monthSelect.value || retentionMonthValue || month);
+      const selectedStylist = stylistSelect.value || "all";
+      yearSelect.innerHTML = "";
+      availableReviewYears().forEach((item) => yearSelect.appendChild(new Option(`${item}年`, item)));
+      monthSelect.innerHTML = "";
+      for (let item = 1; item <= 12; item += 1) {
+        monthSelect.appendChild(new Option(`${item}月`, item));
+      }
+      stylistSelect.innerHTML = "";
+      stylistSelect.appendChild(new Option("全部美容师", "all"));
+      staffList.forEach((staff) => stylistSelect.appendChild(new Option(staff.name, staff.name)));
+      yearSelect.value = selectedYear;
+      monthSelect.value = selectedMonth;
+      stylistSelect.value = [...stylistSelect.options].some((option) => option.value === selectedStylist) ? selectedStylist : "all";
+      retentionYearValue = Number(yearSelect.value || year);
+      retentionMonthValue = Number(monthSelect.value || month);
+    }
+
+    function retentionRows() {
+      fillRetentionFilters();
+      const stylist = document.getElementById("retentionStylist")?.value || "all";
+      const keyword = (document.getElementById("retentionSearch")?.value || "").trim().toLowerCase();
+      const groups = new Map();
+      appointmentRecordsFor(retentionYearValue, retentionMonthValue)
+        .filter((record) => record.staff && record.customer)
+        .filter((record) => stylist === "all" || record.staff === stylist)
+        .forEach((record) => {
+          const member = resolveMemberForAppointment(record);
+          const key = `${record.staff}|${member?.memberCode || normalizePhone(record.phone) || normalizeText(record.customer)}`;
+          const existing = groups.get(key) || {
+            staff: record.staff,
+            customer: record.customer,
+            memberCode: member?.memberCode || "",
+            phone: record.phone || member?.phone || "",
+            visits: 0,
+            services: new Set(),
+            latestDate: record.date
+          };
+          existing.visits += 1;
+          if (record.service) existing.services.add(record.service);
+          if (record.date > existing.latestDate) existing.latestDate = record.date;
+          groups.set(key, existing);
+        });
+      return [...groups.values()]
+        .map((row) => ({ ...row, serviceText: [...row.services].join("、") }))
+        .filter((row) => {
+          const text = `${row.staff} ${row.customer} ${row.memberCode} ${row.phone} ${row.serviceText}`.toLowerCase();
+          return !keyword || text.includes(keyword);
+        })
+        .sort((a, b) => b.visits - a.visits || b.latestDate.localeCompare(a.latestDate));
+    }
+
+    function renderRetentionDashboard() {
+      const body = document.getElementById("retentionDetailBody");
+      if (!body) return;
+      const rows = retentionRows();
+      const repeatRows = rows.filter((row) => row.visits >= 2);
+      const totalVisits = rows.reduce((sum, row) => sum + row.visits, 0);
+      document.getElementById("retentionCustomerCount").textContent = rows.length;
+      document.getElementById("retentionRepeatCount").textContent = repeatRows.length;
+      document.getElementById("retentionAverageVisits").textContent = rows.length ? (totalVisits / rows.length).toFixed(1) : "0";
+      document.getElementById("retentionHighValueCount").textContent = rows.filter((row) => row.visits >= 3).length;
+      renderRankList("retentionCustomerRankList", rows.slice(0, 8).map((row) => [`${row.customer}${row.memberCode ? `（${row.memberCode}）` : ""}`, row.visits]), "暂无复购客户数据", "次");
+      renderRankList("retentionStylistRankList", countBy(appointmentRecordsFor(retentionYearValue, retentionMonthValue), (record) => record.staff || "未分配").slice(0, 8), "暂无美容师复购数据", "次");
+      if (!rows.length) {
+        body.innerHTML = `<tr><td colspan="7" class="member-meta">当前筛选条件下暂无复购数据</td></tr>`;
+        return;
+      }
+      body.innerHTML = rows.map((row) => `
+        <tr>
+          <td>${escapeHtml(row.staff)}</td>
+          <td>${escapeHtml(row.customer)}</td>
+          <td>${escapeHtml(row.memberCode)}</td>
+          <td>${escapeHtml(row.phone)}</td>
+          <td>${row.visits}</td>
+          <td>${escapeHtml(row.serviceText || "未填写")}</td>
+          <td>${escapeHtml(row.latestDate)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function exportRetentionExcel() {
+      const currentStylist = document.getElementById("retentionStylist")?.value || "all";
+      const headers = ["美容师", "客户姓名", "会员编号", "手机号", "到店次数", "项目记录", "最近到店"];
+      const rows = retentionRows().map((row) => [row.staff, row.customer, row.memberCode, row.phone, row.visits, row.serviceText, row.latestDate]);
+      if (!rows.length) {
+        alert("当前筛选条件下暂无可导出的复购数据。");
+        return;
+      }
+      const table = [headers, ...rows]
+        .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell || "")}</td>`).join("")}</tr>`)
+        .join("");
+      const html = `<html><head><meta charset="utf-8"></head><body><table border="1">${table}</table></body></html>`;
+      const blob = new Blob(["\ufeff", html], { type: "application/vnd.ms-excel;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      const stylistLabel = currentStylist === "all" ? "全部美容师" : currentStylist;
+      link.download = `${retentionYearValue}年${retentionMonthValue}月${stylistLabel}复购数据.xls`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -3265,6 +3508,7 @@
         id: row.id,
         type: row.type || "appointment",
         status: row.status || "confirmed",
+        customerType: row.customer_type || "old",
         date: row.appointment_date,
         startTime: row.start_time,
         duration: Number(row.duration || 90),
@@ -3381,6 +3625,7 @@
         id: isUuid(record.id) ? record.id : undefined,
         type: record.type || "appointment",
         status: record.status || "confirmed",
+        customer_type: record.customerType || "old",
         appointment_date: record.date,
         start_time: record.startTime,
         duration: Number(record.duration || 90),
@@ -3659,6 +3904,22 @@
       renderMonthlyReview();
     });
     document.getElementById("exportReviewBtn").addEventListener("click", exportMonthlyReviewExcel);
+    document.getElementById("retentionYear").addEventListener("change", (event) => {
+      retentionYearValue = Number(event.target.value);
+      renderRetentionDashboard();
+    });
+    document.getElementById("retentionMonth").addEventListener("change", (event) => {
+      retentionMonthValue = Number(event.target.value);
+      renderRetentionDashboard();
+    });
+    document.getElementById("retentionStylist").addEventListener("change", renderRetentionDashboard);
+    document.getElementById("retentionSearch").addEventListener("input", renderRetentionDashboard);
+    document.getElementById("clearRetentionSearchBtn").addEventListener("click", () => {
+      document.getElementById("retentionSearch").value = "";
+      document.getElementById("retentionStylist").value = "all";
+      renderRetentionDashboard();
+    });
+    document.getElementById("exportRetentionBtn").addEventListener("click", exportRetentionExcel);
     document.querySelector(".sidebar").addEventListener("click", (event) => {
       const moduleButton = event.target.closest("[data-module]");
       if (moduleButton) {
@@ -3698,7 +3959,7 @@
     });
 
     render();
-    switchAppointmentPage("dashboard");
+    switchAppointmentPage("daily");
     updateLoginState();
   </script>
 </body>
