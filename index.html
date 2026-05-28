@@ -816,6 +816,14 @@
       color: var(--ink);
     }
 
+    .customer-tools select {
+      padding-right: 46px;
+      background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3.2 5.2 7 9l3.8-3.8' fill='none' stroke='%23303642' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 20px center;
+      background-size: 14px 14px;
+    }
+
     .customer-tools input {
       width: 100%;
     }
@@ -1166,6 +1174,15 @@
       padding: 8px 12px;
       background: #fff;
       color: var(--ink);
+    }
+
+    select {
+      appearance: none;
+      padding-right: 46px;
+      background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3.2 5.2 7 9l3.8-3.8' fill='none' stroke='%23303642' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 20px center;
+      background-size: 14px 14px;
     }
 
     input:focus,
@@ -2554,10 +2571,15 @@
     }
 
     function renderSummary() {
-      const dayRecords = dedupeRecords(records).filter((record) => record.date === dateValue(selectedDay));
-      const active = dayRecords.filter((record) => record.type !== "blocked" && record.status !== "cancelled");
-      const pending = dayRecords.filter((record) => record.status === "pending");
-      const blocked = dayRecords.filter((record) => record.type === "blocked");
+      let sourceRecords = dedupeRecords(records).filter((record) => record.date === dateValue(selectedDay));
+      if (currentAppointmentPage === "monthlyReview") {
+        sourceRecords = reviewRecords();
+      } else if (currentAppointmentPage === "stylists" || currentAppointmentPage === "retention") {
+        sourceRecords = appointmentRecordsFor(year, month);
+      }
+      const active = sourceRecords.filter((record) => record.type !== "blocked" && record.status !== "cancelled");
+      const pending = sourceRecords.filter((record) => record.status === "pending");
+      const blocked = sourceRecords.filter((record) => record.type === "blocked");
       const advisors = staffList.filter((staff) => staff.role === "顾问").length;
       const beauticians = staffList.filter((staff) => staff.role === "美容师").length;
       summaryRow.innerHTML = `
@@ -2612,6 +2634,7 @@
         element.style.display = pageName === "stylists" ? "" : "none";
       });
       renderTitle();
+      renderSummary();
       renderDashboard();
       renderStylistCustomers();
       renderMonthlyReview();
@@ -3197,6 +3220,7 @@
       const body = document.getElementById("reviewDetailBody");
       if (!body) return;
       fillReviewSelectors();
+      if (currentAppointmentPage === "monthlyReview") renderSummary();
       const rows = reviewRecords();
       const customers = new Set(rows.map((record) => normalizePhone(record.phone) || record.customer).filter(Boolean));
       const newCustomerRows = rows.filter((record) => record.customerType === "new");
