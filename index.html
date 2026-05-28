@@ -2578,14 +2578,10 @@
         sourceRecords = appointmentRecordsFor(year, month);
       }
       const active = sourceRecords.filter((record) => record.type !== "blocked" && record.status !== "cancelled");
-      const pending = sourceRecords.filter((record) => record.status === "pending");
-      const blocked = sourceRecords.filter((record) => record.type === "blocked");
       const advisors = staffList.filter((staff) => staff.role === "顾问").length;
       const beauticians = staffList.filter((staff) => staff.role === "美容师").length;
       summaryRow.innerHTML = `
         <span class="pill">预约 ${active.length} 单</span>
-        <span class="pill">待确认 ${pending.length} 单</span>
-        <span class="pill">占用 ${blocked.length} 个</span>
         <span class="pill">顾问 ${advisors} 位</span>
         <span class="pill">美容师 ${beauticians} 位</span>
       `;
