@@ -2166,6 +2166,8 @@
     let members = loadMembers();
     let supabaseMemberIds = new Set();
     let cloudBootstrapped = false;
+    let cloudReadInProgress = false;
+    let cloudSaveInProgress = false;
     const dashboardContentId = "main";
 
     const dateStrip = document.getElementById("dateStrip");
@@ -2994,6 +2996,29 @@
       }
       if (updateConflictWarning()) return;
 
+      if (cloudReadInProgress || cloudSaveInProgress) {
+        alert("云端正在同步，请稍后再保存。");
+        return;
+      }
+      if (config.storageMode === "supabase") {
+        cloudSaveInProgress = true;
+        const button = form.querySelector('[type="submit"]');
+        button.disabled = true;
+        try {
+          setSyncStatus("正在保存预约到 Supabase...");
+          record = await saveSupabaseAppointment(record);
+          setSyncStatus("预约已保存到 Supabase。", "ok");
+        } catch (error) {
+          const message = formatSupabaseError(error, "预约未保存到云端，请保留表单并重试");
+          setSyncStatus(message, "error");
+          alert(message);
+          return;
+        } finally {
+          cloudSaveInProgress = false;
+          button.disabled = false;
+        }
+      }
+
       selectedDay = Number(record.date.slice(-2));
       const index = records.findIndex((item) => item.id === record.id);
       if (index >= 0) {
@@ -3009,21 +3034,6 @@
       saveRecords();
       closeModal();
       render();
-      if (config.storageMode === "supabase") {
-        try {
-          setSyncStatus("正在保存预约到 Supabase...");
-          const savedRecord = await saveSupabaseAppointment(record);
-          records = records.map((item) => item.id === record.id ? savedRecord : item);
-          records = dedupeRecords(records);
-          saveRecords();
-          setSyncStatus("预约已保存到 Supabase。", "ok");
-          render();
-        } catch (error) {
-          const message = formatSupabaseError(error, "预约已先保存在前端，但 Supabase 没有写入成功");
-          setSyncStatus(message, "error");
-          alert(message);
-        }
-      }
     }
 
     async function deleteCurrentRecord() {
@@ -3628,6 +3638,28 @@
         alert("该手机号已存在于会员资料中。");
         return;
       }
+      if (cloudReadInProgress || cloudSaveInProgress) {
+        alert("云端正在同步，请稍后再保存。");
+        return;
+      }
+      if (config.storageMode === "supabase") {
+        cloudSaveInProgress = true;
+        const button = memberForm.querySelector('[type="submit"]');
+        button.disabled = true;
+        try {
+          setSyncStatus("正在保存会员到 Supabase...");
+          member = await saveSupabaseMember(member);
+          setSyncStatus("会员已保存到 Supabase。", "ok");
+        } catch (error) {
+          const message = formatSupabaseError(error, "会员未保存到云端，请保留表单并重试");
+          setSyncStatus(message, "error");
+          alert(message);
+          return;
+        } finally {
+          cloudSaveInProgress = false;
+          button.disabled = false;
+        }
+      }
       const index = members.findIndex((item) => item.id === member.id);
       if (index >= 0) {
         members[index] = member;
@@ -3641,20 +3673,6 @@
       closeMemberModal();
       renderMembers();
       renderGrid();
-      if (config.storageMode === "supabase") {
-        try {
-          setSyncStatus("正在保存会员到 Supabase...");
-          const savedMember = await saveSupabaseMember(member);
-          members = members.map((item) => item.id === member.id ? savedMember : item);
-          saveMembers();
-          setSyncStatus("会员已保存到 Supabase。", "ok");
-          render();
-        } catch (error) {
-          const message = formatSupabaseError(error, "会员已先保存在前端，但 Supabase 没有写入成功");
-          setSyncStatus(message, "error");
-          alert(message);
-        }
-      }
     }
 
     async function deleteCurrentMember() {
@@ -4156,14 +4174,26 @@
       if (contentValue) {
         applyDashboardContent(contentValue);
       }
+      const cloudRecords = dedupeRecords((appointmentsResult.data || []).map(mapSupabaseAppointment));
+      const cloudIds = new Set(cloudRecords.map((record) => record.id));
+      const localOnlyRecords = records.filter((record) => !cloudIds.has(record.id));
+      if (localOnlyRecords.length) {
+        // Preserve legacy local-only bookings without uploading potentially deleted records.
+        const recoveryKey = "beautySchedulerUnsyncedRecovery";
+        let recovery = [];
+        try { recovery = JSON.parse(localStorage.getItem(recoveryKey)) || []; } catch (error) {}
+        localStorage.setItem(recoveryKey, JSON.stringify(dedupeRecords([...recovery, ...localOnlyRecords])));
+      }
       members = (membersResult.data || []).map(mapSupabaseMember);
       supabaseMemberIds = new Set(members.map((member) => member.id).filter(Boolean));
-      records = dedupeRecords((appointmentsResult.data || []).map(mapSupabaseAppointment));
+      records = cloudRecords;
       config.staffList = staffList;
       saveConfig();
       saveMembers();
       saveRecords();
-      setSyncStatus("已读取 Supabase 数据。", "ok");
+      setSyncStatus(localOnlyRecords.length
+        ? `已读取云端。发现 ${localOnlyRecords.length} 条仅本地存在的预约，已保留恢复备份，请核对是否曾保存失败或已删除。`
+        : "已读取 Supabase 数据。", localOnlyRecords.length ? "error" : "ok");
       render();
     }
 
@@ -4246,6 +4276,8 @@
     }
 
     async function readCloudData() {
+      if (cloudSaveInProgress || cloudReadInProgress) return;
+      cloudReadInProgress = true;
       try {
         if (config.storageMode === "supabase") {
           await pullSupabaseData();
@@ -4261,6 +4293,8 @@
           : (error.message || String(error));
         setSyncStatus(message, "error");
         alert(message);
+      } finally {
+        cloudReadInProgress = false;
       }
     }
 
@@ -4287,7 +4321,7 @@
       const user = document.getElementById("loginUser").value.trim();
       const password = document.getElementById("loginPassword").value;
       const message = document.getElementById("loginMessage");
-      if (user === "admin" && password === "admin123") {
+      if (user === "admin" && password === "xiaobao888") {
         localStorage.setItem("beautySchedulerLoggedIn", "yes");
         message.textContent = "登录成功。";
         message.className = "sync-status ok";
