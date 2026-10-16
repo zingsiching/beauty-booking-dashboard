@@ -1828,12 +1828,13 @@
             </select>
           </div>
           <div class="field">
-            <label for="status">状态</label>
-            <select id="status">
-              <option value="confirmed">已确认</option>
-              <option value="pending">待确认</option>
-              <option value="arrived">已到店/进行中</option>
-              <option value="cancelled">已取消</option>
+            <label for="customerSource">客源</label>
+            <input type="hidden" id="status" value="confirmed">
+            <select id="customerSource">
+              <option value="">请选择</option>
+              <option value="meituan">美团</option>
+              <option value="douyin">抖音</option>
+              <option value="referral">转介绍</option>
             </select>
           </div>
           <div class="field">
@@ -2359,6 +2360,7 @@
         record.type || "appointment",
         record.status || "",
         record.customerType || "old",
+        record.customerSource || "",
         record.date || "",
         record.startTime || "",
         Number(record.duration || 0),
@@ -2564,7 +2566,7 @@
       button.innerHTML = `
         <div class="appt-name">${escapeHtml(title)}</div>
         <div class="appt-detail">${record.startTime} - ${endTime(record)}</div>
-        <div class="appt-detail">类型：${customerTypeLabel(record.customerType)}</div>
+        <div class="appt-detail">类型：${customerTypeLabel(record.customerType)}${record.type !== "blocked" && record.customerSource ? ` · 客源：${customerSourceLabel(record.customerSource)}` : ""}</div>
         <div class="appt-detail">房间：${escapeHtml(room)}</div>
         <div class="appt-detail">项目：${escapeHtml(service)}</div>
         <div class="appt-detail">折扣：${escapeHtml(discountText)}</div>
@@ -2743,6 +2745,10 @@
       return Object.entries(counts).sort((a, b) => b[1] - a[1]);
     }
 
+    function customerSourceLabel(value) {
+      return { meituan: "美团", douyin: "抖音", referral: "转介绍" }[value] || "未填写";
+    }
+
     function customerTypeLabel(value) {
       return value === "new" ? "新客" : "老客";
     }
@@ -2865,6 +2871,7 @@
       document.getElementById("memberId").value = data.memberId || "";
       document.getElementById("recordType").value = data.type || "appointment";
       document.getElementById("status").value = data.status || "confirmed";
+      document.getElementById("customerSource").value = data.customerSource || "";
       document.getElementById("customerType").value = data.customerType || "old";
       document.getElementById("date").value = data.date || dateValue(selectedDay);
       document.getElementById("startTime").value = data.startTime || minutesToTime(openMinutes);
@@ -2905,6 +2912,7 @@
         type: document.getElementById("recordType").value,
         status: document.getElementById("status").value,
         customerType: document.getElementById("customerType").value,
+        customerSource: document.getElementById("customerSource").value,
         date: document.getElementById("date").value,
         startTime: document.getElementById("startTime").value,
         duration: Number(document.getElementById("duration").value),
@@ -3054,7 +3062,7 @@
     }
 
     function exportExcel() {
-      const headers = ["预约日期", "开始时间", "结束时间", "客户姓名", "客户类型", "手机号", "是否会员", "会员等级", "产品折扣", "服务项目", "美容师", "房间", "仪器", "类型", "预约状态", "备注", "登记人", "创建时间", "更新时间"];
+      const headers = ["预约日期", "开始时间", "结束时间", "客户姓名", "客户类型", "客源", "手机号", "是否会员", "会员等级", "产品折扣", "服务项目", "美容师", "房间", "仪器", "类型", "预约状态", "备注", "登记人", "创建时间", "更新时间"];
       const rows = appointmentRecordsFor(year, month).map((record) => {
         const member = resolveMemberForAppointment(record);
         return [
@@ -3063,6 +3071,7 @@
           endTime(record),
           record.customer,
           customerTypeLabel(record.customerType),
+          customerSourceLabel(record.customerSource),
           record.phone,
           member ? "是" : "否",
           member?.level || "",
@@ -3879,6 +3888,9 @@
       const code = error?.code ? `（${error.code}）` : "";
       const detail = error?.message || String(error || "未知错误");
       const lower = detail.toLowerCase();
+      if (lower.includes("customer_source") && (error?.code === "PGRST204" || error?.code === "42703")) {
+        return `${prefix}：云端尚未添加客源字段，请先运行 supabase-appointment-customer-source.sql。原始提示：${detail}`;
+      }
       if (
         error?.code === "42501" ||
         error?.status === 401 ||
@@ -3983,6 +3995,7 @@
         type: row.type || "appointment",
         status: row.status || "confirmed",
         customerType: row.customer_type || "old",
+        customerSource: row.customer_source || "",
         date: row.appointment_date,
         startTime: row.start_time,
         duration: Number(row.duration || 90),
@@ -4100,6 +4113,7 @@
         type: record.type || "appointment",
         status: record.status || "confirmed",
         customer_type: record.customerType || "old",
+        customer_source: record.customerSource || null,
         appointment_date: record.date,
         start_time: record.startTime,
         duration: Number(record.duration || 90),
