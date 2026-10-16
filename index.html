@@ -4120,7 +4120,25 @@
       };
     }
 
-    async function pullSupabaseData() {
+    async function fetchAllSupabaseRows(createQuery) {
+      const pageSize = 500;
+      const rows = [];
+      while (true) {
+        const { data, error, count } = await createQuery().range(rows.length, rows.length + pageSize - 1);
+        if (error) throw error;
+        const page = data || [];
+        rows.push(...page);
+        if (typeof count === "number") {
+          if (rows.length >= count) break;
+          if (!page.length) throw new Error("云端数据未完整读取，请刷新重试。");
+        } else if (!page.length) {
+          break;
+        }
+      }
+      return { data: rows, error: null };
+    }
+
+    async function pullSupabaseData({ deferWhileEditing = false } = {}) {
       const client = getSupabaseClient();
       setSyncStatus("正在读取 Supabase...");
       const [
@@ -4136,8 +4154,8 @@
         client.from("services").select("*").eq("enabled", true).order("sort_order"),
         client.from("rooms").select("*").eq("enabled", true).order("sort_order"),
         client.from("instruments").select("*").eq("enabled", true).order("sort_order"),
-        client.from("members").select("*").order("created_at", { ascending: false }),
-        client.from("appointments").select("*").order("appointment_date").order("start_time"),
+        fetchAllSupabaseRows(() => client.from("members").select("*", { count: "exact" }).order("created_at", { ascending: false }).order("id")),
+        fetchAllSupabaseRows(() => client.from("appointments").select("*", { count: "exact" }).order("appointment_date").order("start_time").order("id")),
         client.from("app_settings").select("value").eq("key", "business_config").maybeSingle()
       ]);
       const error = staffResult.error || servicesResult.error || roomsResult.error || instrumentsResult.error || membersResult.error || appointmentsResult.error || settingsResult.error;
@@ -4156,6 +4174,10 @@
           throw { ...contentError, message: `dashboard_content: ${contentError.message}` };
         }
       }
+      // A form may have been opened while the network requests were in flight.
+      if (deferWhileEditing && (modalBackdrop.classList.contains("open")
+        || settingsBackdrop.classList.contains("open")
+        || memberModalBackdrop.classList.contains("open"))) return false;
       if (settingsResult.data?.value) {
         applyConfig({
           ...config,
@@ -4193,7 +4215,7 @@
       saveRecords();
       setSyncStatus(localOnlyRecords.length
         ? `已读取云端。发现 ${localOnlyRecords.length} 条仅本地存在的预约，已保留恢复备份，请核对是否曾保存失败或已删除。`
-        : "已读取 Supabase 数据。", localOnlyRecords.length ? "error" : "ok");
+        : `已读取 Supabase：${cloudRecords.length} 条预约，${members.length} 位会员。`, localOnlyRecords.length ? "error" : "ok");
       render();
     }
 
@@ -4275,37 +4297,47 @@
       supabaseMemberIds.delete(id);
     }
 
-    async function readCloudData() {
-      if (cloudSaveInProgress || cloudReadInProgress) return;
+    async function readCloudData({ silent = false } = {}) {
+      if (cloudSaveInProgress || cloudReadInProgress) return false;
       cloudReadInProgress = true;
       try {
         if (config.storageMode === "supabase") {
-          await pullSupabaseData();
+          if (await pullSupabaseData({ deferWhileEditing: silent }) === false) return false;
         } else if (config.storageMode === "googleSheets") {
           await pullCloudData();
         } else {
           setSyncStatus("当前使用浏览器本地数据。", "ok");
           render();
         }
+        return true;
       } catch (error) {
         const message = config.storageMode === "supabase"
           ? formatSupabaseError(error, "读取云端失败")
           : (error.message || String(error));
         setSyncStatus(message, "error");
-        alert(message);
+        if (!silent) alert(message);
+        return false;
       } finally {
         cloudReadInProgress = false;
       }
     }
 
+    async function refreshCloudIfIdle() {
+      if (config.storageMode !== "supabase"
+        || localStorage.getItem("beautySchedulerLoggedIn") !== "yes"
+        || document.visibilityState !== "visible"
+        || navigator.onLine === false
+        || cloudReadInProgress || cloudSaveInProgress
+        || modalBackdrop.classList.contains("open")
+        || settingsBackdrop.classList.contains("open")
+        || memberModalBackdrop.classList.contains("open")) return;
+      await readCloudData({ silent: true });
+    }
+
     async function bootstrapCloudData() {
       if (cloudBootstrapped || config.storageMode !== "supabase") return;
       cloudBootstrapped = true;
-      try {
-        await readCloudData();
-      } catch (error) {
-        cloudBootstrapped = false;
-      }
+      cloudBootstrapped = await readCloudData();
     }
 
     function updateLoginState() {
@@ -4447,6 +4479,12 @@
       if (event.key === "Escape" && settingsBackdrop.classList.contains("open")) closeSettings();
       if (event.key === "Escape" && memberModalBackdrop.classList.contains("open")) closeMemberModal();
     });
+
+    // Mobile browsers pause background tabs; refresh when the user returns.
+    document.addEventListener("visibilitychange", refreshCloudIfIdle);
+    window.addEventListener("focus", refreshCloudIfIdle);
+    window.addEventListener("online", refreshCloudIfIdle);
+    setInterval(refreshCloudIfIdle, 60000);
 
     render();
     switchAppointmentPage("daily");
