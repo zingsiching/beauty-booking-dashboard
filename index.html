@@ -1480,8 +1480,8 @@
         <div class="side-subnav" aria-label="预约页面">
           <button class="side-subnav-btn active" type="button" data-appointment-page="daily">当日预约管理</button>
           <button class="side-subnav-btn" type="button" data-appointment-page="monthlyReview">月度预约数据看板</button>
-          <button class="side-subnav-btn" type="button" data-appointment-page="stylists">美容师客户管理看板</button>
-          <button class="side-subnav-btn" type="button" data-appointment-page="retention">美容师复购数据看板</button>
+          <button class="side-subnav-btn" type="button" data-appointment-page="stylists">操作师客户管理看板</button>
+          <button class="side-subnav-btn" type="button" data-appointment-page="retention">复购数据看板</button>
         </div>
 
         <div class="section-title">当前规则</div>
@@ -2605,8 +2605,8 @@
       const titles = {
         daily: "当日预约管理",
         monthlyReview: "月度预约数据看板",
-        stylists: "美容师客户管理看板",
-        retention: "美容师复购数据看板"
+        stylists: "操作师客户管理看板",
+        retention: "复购数据看板"
       };
       pageTitle.textContent = titles[currentAppointmentPage] || "预约管理";
       pageMeta.textContent = `${monthLabel()} · 营业时间 ${minutesToTime(openMinutes)} - ${minutesToTime(closeMinutes)}`;
